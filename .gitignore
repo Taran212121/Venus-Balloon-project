@@ -1,0 +1,122 @@
+
+# =========================================
+# Python
+# =========================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =========================================
+# IDEs and editors
+# =========================================
+# PyCharm / IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+
+# =========================================
+# Caches and temporary files
+# =========================================
+.cache/
+pytest_cache/
+__pypackages__/
+*.log
+*.tmp
+*.bak
+*.swp
+
+# =========================================
+# Testing & Coverage
+# =========================================
+.coverage
+.tox/
+.nox/
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# =========================================
+# Jupyter / notebooks
+# =========================================
+.ipynb_checkpoints/
+
+# =========================================
+# OS-specific
+# =========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================================
+# Project specific
+# =========================================
+# Cache or intermediate data directories
+core/__pycache__/
+gui/__pycache__/
+processing/__pycache__/
+resources/cache/
+cache/
+tmp/
+output/
+out/
+data/
+
+# Intermediate data
+*.npy
+*.npz
+*.pt
+*.pth
+
+# Logs
+logs/
+*.log
+
+# Local config overrides
+config_local.yaml
+*.local.json
+*.local.yaml
+
