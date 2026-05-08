@@ -28,7 +28,7 @@ def load_config(path: Path) -> ScenarioConfig:
 
         simulation=SimulationConfig(
             start_time=data["simulation"]["start_time"],
-            duration_s=data["simulation"]["duration_s"],
+            duration_s=data["simulation"]["duration_days"] * 24 * 3600,
             dt_s=data["simulation"]["dt_s"],
         ),
 

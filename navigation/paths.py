@@ -7,7 +7,9 @@ ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = ROOT / "config"
 ENVIRONMENT_DIR = ROOT / "environment"
 PROPAGATORS_DIR = ROOT / "propagators"
+TOOLS_DIR = ROOT / "tools"
 
 # Data
+DATA_DIR = ROOT / "data"
 SCENARIOS_DIR = ROOT / "scenarios"
 

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-
+from scipy.integrate import solve_ivp
 
 
 from vehicles.orbiter import OrbiterState, state_to_vector, vector_to_state
@@ -45,6 +45,35 @@ class TwoBodyNewtonPropagator(OrbiterPropagator):
             velocity=v0
         )
 
+    def dynamics(self, t, y):
+
+        r = y[:3]
+        v = y[3:]
+
+        r_norm = np.linalg.norm(r)
+
+        acceleration = -self.mu * r / r_norm**3
+
+        dydt = np.hstack([
+            v,
+            acceleration
+        ])
+
+        return dydt
+
     def step(self, state, dt, env):
-        # run simple propagator using whatever numerical solver is stable for orbits
-        ...
+
+        y0 = state_to_vector(state)
+
+        solution = solve_ivp(
+            fun=self.dynamics,
+            t_span=(0, dt),
+            y0=y0,
+            method="RK45",
+            rtol=1e-9,
+            atol=1e-9
+        )
+
+        y_final = solution.y[:, -1]
+
+        return vector_to_state(y_final)
