@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 # Project root
 ROOT = Path(__file__).resolve().parent
 
@@ -13,3 +14,9 @@ TOOLS_DIR = ROOT / "tools"
 DATA_DIR = ROOT / "data"
 SCENARIOS_DIR = ROOT / "scenarios"
 
+DATA_DIR.mkdir(exist_ok=True)
+SCENARIOS_DIR.mkdir(exist_ok=True)
+
+
+if __name__ == "__main__":
+    print("paths.py executed correctly!")

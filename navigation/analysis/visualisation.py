@@ -220,3 +220,76 @@ def plot_simulation_3d(
     ax.legend()
 
     plt.show()
+
+
+def plot_link_analysis(
+    times,
+    distances,
+    elevation_deg,
+    link_available
+):
+
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(12, 8),
+        sharex=True
+    )
+
+    # -----------------------------------------
+    # Distance
+    # -----------------------------------------
+
+    axes[0].plot(
+        times,
+        distances / 1000
+    )
+
+    axes[0].set_ylabel(
+        "Distance [km]"
+    )
+
+    axes[0].grid(True)
+
+    # -----------------------------------------
+    # Elevation
+    # -----------------------------------------
+
+    axes[1].plot(
+        times,
+        elevation_deg,
+        color="darkorange"
+    )
+
+    axes[1].axhline(
+        20,
+        color="red",
+        linestyle="--"
+    )
+
+    axes[1].axhline(
+        80,
+        color="red",
+        linestyle="--"
+    )
+
+    # Shade communication windows
+    axes[1].fill_between(
+        times,
+        20,
+        80,
+        where=link_available,
+        alpha=0.3
+    )
+
+    axes[1].set_ylabel(
+        "Elevation [deg]"
+    )
+
+    axes[1].set_xlabel(
+        "Time [s]"
+    )
+
+    axes[1].grid(True)
+
+    plt.show()

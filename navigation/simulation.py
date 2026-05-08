@@ -1,7 +1,6 @@
 import numpy as np
 
 from config.config_loader import load_config
-
 from environment.venus import VenusModel
 from environment.atmosphere import AtmosphereModel
 
@@ -14,8 +13,8 @@ from propagators.orbiter_propagator import (
 )
 
 from vehicles.balloon import BalloonState
-
-from analysis.visualisation import plot_orbit_3d, plot_simulation_3d
+from analysis.visualisation import plot_orbit_3d, plot_simulation_3d, plot_link_analysis
+from analysis.communications import compute_link_metrics
 
 from paths import *
 
@@ -163,6 +162,20 @@ def main():
         orbiter_position_history,
         balloon_history_vci,
         venus.radius
+    )
+
+    # Link budget
+    metrics = compute_link_metrics(
+        time_history,
+        orbiter_position_history,
+        balloon_history_vci
+    )
+
+    plot_link_analysis(
+        time_history,
+        metrics['distances'],
+        metrics['elevation_deg'],
+        metrics['link_available']
     )
 
 
