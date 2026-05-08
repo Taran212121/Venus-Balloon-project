@@ -45,35 +45,46 @@ class TwoBodyNewtonPropagator(OrbiterPropagator):
             velocity=v0
         )
 
-    def dynamics(self, t, y):
+    def acceleration(self, r):
+        """Two-body gravitational acceleration."""
+        r2 = np.dot(r, r)
+        r3 = r2 * np.sqrt(r2)
+        return -self.mu * r / r3
 
-        r = y[:3]
-        v = y[3:]
+    def step(
+        self,
+        state,
+        dt,
+        env
+    ):
+        """
+        Perform one symplectic integration step.
+        """
 
-        r_norm = np.linalg.norm(r)
+        # Current state
+        r = state.position
+        v = state.velocity
 
-        acceleration = -self.mu * r / r_norm**3
+        # Initial acceleration
+        a0 = self.acceleration(r)
 
-        dydt = np.hstack([
-            v,
-            acceleration
-        ])
-
-        return dydt
-
-    def step(self, state, dt, env):
-
-        y0 = state_to_vector(state)
-
-        solution = solve_ivp(
-            fun=self.dynamics,
-            t_span=(0, dt),
-            y0=y0,
-            method="RK45",
-            rtol=1e-9,
-            atol=1e-9
+        # Position update
+        r_new = (
+            r
+            + v * dt
+            + 0.5 * a0 * dt * dt
         )
 
-        y_final = solution.y[:, -1]
+        # Acceleration update
+        a1 = self.acceleration(r_new)
 
-        return vector_to_state(y_final)
+        # Velocity update
+        v_new = (
+            v
+            + 0.5 * (a0 + a1) * dt
+        )
+
+        return OrbiterState(
+            position=r_new,
+            velocity=v_new
+        )
