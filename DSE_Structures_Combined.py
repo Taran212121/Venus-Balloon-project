@@ -1,20 +1,46 @@
 """
 VISTA Combined Dynamics — Pendulum + Torsion (uncoupled)
-========================================================
+=========================================================
 
-Side-by-side simulation of:
+What this script does
+---------------------
+This is an engineering design tool for the VISTA Venus balloon mission.
+It models two independent structural dynamics problems side-by-side:
 
-    Pendulum / oscillation:   Mx xddot + Cx xdot + Kx x = Fx(t)
-    Torsion:                  Mz zddot + Cz zdot + Kz z = Tz(t)
+  1. PENDULUM  (lateral swing):  Mx·ẍ + Cx·ẋ + Kx·x = Fx(t)
+     The balloon, suspension cables, and gondola are discretised as a
+     chain of rigid segments connected by revolute joints.  The model
+     predicts how the gondola tilts and swings under disturbances.
 
-The two systems share the same mission parameters and are integrated in
-the same script, but they are NOT coupled (no off-diagonal pendulum-torsion
-terms). This is an engineering design tool, not a fully coupled
-multibody model.
+  2. TORSION   (yaw twist):      Mz·z̈ + Cz·ż + Kz·z = Tz(t)
+     The same chain is loaded in torsion.  The bifilar (multi-cable)
+     arrangement provides a restoring torque that keeps the gondola
+     from spinning.  The model predicts gondola yaw and cable twist.
 
-Source scripts:
-    - DSE_Structures_Pendulums.py
-    - DSE_Structures_Torsion.py
+The two models share the same geometry and mass inputs, but are
+NOT coupled — pendulum swinging and yaw twisting are treated as
+independent motions.  Coupling would only matter for large amplitudes.
+
+How to use it
+-------------
+  1. Edit section 2 (USER INPUTS) to match your design.
+  2. Run the script.  It prints a V&V check log, then a summary table.
+  3. Two plot windows appear: one for pendulum, one for torsion.
+  4. If a WARNING is printed, read the explanation next to it.
+
+Key assumptions / limitations
+------------------------------
+  - Small-angle linearisation (valid up to ~10°).
+  - Uniform modal damping ratio applied to all flexible modes.
+  - The lateral translation DOF (y1) has no restoring force —
+    the whole chain can drift sideways freely (no aerodynamic drag).
+  - Cable tension estimate is a first-order engineering approximation.
+
+Source scripts
+--------------
+  - DSE_Structures_Pendulums.py  (pendulum model reference)
+  - DSE_Structures_Torsion.py    (torsion model reference)
+  - Kassarian et al. 2021        (bifilar stiffness derivation)
 """
 
 # ==================================
@@ -29,6 +55,10 @@ import matplotlib.pyplot as plt
 # ==================================
 # 2. USER INPUTS
 # ==================================
+# *** CHANGE THESE VALUES TO MATCH YOUR DESIGN ***
+# All numbers below propagate automatically into both the pendulum
+# and torsion models.  Physical parameters come first, followed by
+# numerical settings and then the disturbance inputs for each run.
 
 # --- Shared physical parameters ---
 m_balloon = 200.0          # kg     balloon mass
@@ -41,8 +71,11 @@ L_gondola = 0.6            # m      gondola length
 L_susp = 3.0               # m      total suspension length (balloon -> gondola)
 
 # Discretization fidelity (kept independent for the two physics)
-N_tether_pendulum = 1      # tether segments for pendulum model
-N_tether_torsion  = 1      # tether segments for torsion model
+# Increase these for a finer mesh (more segments = more DOFs = slower, but
+# more accurate for distributed cable mass effects).  1 is sufficient for
+# preliminary design.  They do NOT need to be equal to each other.
+N_tether_pendulum = 1      # number of internal tether segments in pendulum chain
+N_tether_torsion  = 1      # number of internal tether segments in torsion chain
 
 # Cable / suspension geometry
 N_cables          = 4      # physical number of cables (bifilar / multifilar)
@@ -53,11 +86,17 @@ r                 = 0.25   # m      cable radius from yaw axis (torsion)
 g = 8.72                   # m/s^2  Venus gravity at ~52 km
 
 # Modal damping ratios
-zeta_pendulum = 5e-3
-zeta_torsion  = 1e-3
+# A single damping ratio is applied to ALL flexible modes (proportional
+# modal damping).  Pendulum is mainly aerodynamic; torsion is very lightly
+# damped in the Venus 52 km environment.  Both are conservative estimates.
+zeta_pendulum = 5e-3       # [-]  pendulum modal damping (0.5 % of critical)
+zeta_torsion  = 1e-3       # [-]  torsion  modal damping (0.1 % of critical)
 
 # Balloon CG/CP offset coefficient (pendulum buoyancy effect)
-lamb = 0.1
+# lamb > 0 makes balloon tilt destabilising (CG below CP) which LOWERS
+# the effective pendulum stiffness of the balloon segment.  Set lamb=0
+# to treat the balloon as a passive mass with no buoyancy contribution.
+lamb = 0.1                 # [-]  buoyancy destabilisation coefficient
 
 # --- Simulation time settings ---
 t_final = 50.0             # s
@@ -65,11 +104,22 @@ dt      = 0.05             # s
 t_eval  = np.arange(0.0, t_final + dt, dt)
 
 # --- Pendulum disturbance inputs (combine freely) ---
+# The three inputs below can be set simultaneously; their effects add in
+# the initial-condition vector.  Common usage:
+#   • pend_initial_angle_deg  – sudden wind gust that tilts the whole chain
+#   • pend_initial_rate_deg_s – initial swing velocity
+#   • pend_impulse_Ns         – sharp horizontal force applied at the top
+#     NOTE: this impulse acts on the lateral DOF y1, NOT directly on the
+#     gondola tilt angle.  To see a visible tilt response you need a large
+#     impulse (~hundreds of N·s) because the system inertia is ~250 kg.
 pend_initial_angle_deg  = 0.0    # deg     uniform initial chain swing angle
 pend_initial_rate_deg_s = 0.0    # deg/s   uniform initial chain swing rate
-pend_impulse_Ns         = 1000.0    # N s     generalized lateral impulse on y1
+pend_impulse_Ns         = 1000.0 # N s     generalized lateral impulse on y1
 
 # --- Torsion disturbance inputs (combine freely) ---
+# torsion_initial_twist_deg applies a linearly distributed pre-twist from
+# balloon (0°) to gondola (the specified value).  This mimics a wound-up
+# cable scenario.  The angular impulse is applied directly to the gondola.
 torsion_initial_twist_deg     = 0.0   # deg     stored twist (linearly distributed)
 torsion_initial_yaw_rate_deg_s = 0.0  # deg/s   gondola initial yaw rate
 torsion_impulse_Nms           = 1.0   # N m s   angular impulse at gondola
@@ -81,13 +131,23 @@ mode_tol = 1e-8
 # ==================================
 # 3. BUILD PENDULUM MODEL  (Mx, Kx)
 # ==================================
+# Physical picture:
+#   Imagine a chain hanging from a fixed point (the balloon attachment).
+#   Each link is a rigid body (balloon / cable segment / gondola) that can
+#   tilt independently.  The whole chain can also slide sideways (y1).
+#
 # Discretization (matches DSE_Structures_Pendulums.py):
 #   N_p     = N_tether_pendulum + 2  (balloon + tether segments + gondola)
 #   DOF_p   = N_p + 1                (y1 lateral + N_p tilt angles)
 #
 # Coordinate vector:  x = [ y1, theta_0, theta_1, ..., theta_{N_p-1} ]
-#   - theta_0       : balloon tilt
-#   - theta_{N_p-1} : gondola tilt   (main pendulum coordinate)
+#   - y1            : absolute lateral displacement of the top of the chain
+#   - theta_0       : tilt angle of the balloon body
+#   - theta_1..-2   : tilt angles of the cable segments
+#   - theta_{N_p-1} : tilt angle of the gondola  (the quantity we care about most)
+#
+# Equations of motion derived from Lagrange's equations:
+#   Mx ẍ + Cx ẋ + Kx x = Fx(t)
 
 N_p   = N_tether_pendulum + 2
 DOF_p = N_p + 1
@@ -97,6 +157,8 @@ m_pend = [m_balloon]
 L_pend = [L_balloon]
 I_pend = [(1.0 / 6.0) * m_balloon * L_balloon ** 2]   # thin spherical shell
 
+# Divide the total cable mass equally among the tether segments.
+# Each segment is a uniform rod, so its moment of inertia is (1/12) m L^2.
 m_one_tether_pend = (N_cables * m_one_cable_total) / N_tether_pendulum
 L_one_tether_pend = L_susp / N_tether_pendulum
 for _ in range(N_tether_pendulum):
@@ -104,6 +166,9 @@ for _ in range(N_tether_pendulum):
     L_pend.append(L_one_tether_pend)
     I_pend.append((1.0 / 12.0) * m_one_tether_pend * L_one_tether_pend ** 2)
 
+# Gondola is a short solid cylinder; its inertia combines a hoop term
+# (0.5 m R^2 for rotation about the long axis) and a rod term (1/12 m L^2
+# for rotation perpendicular to the axis, which is the relevant pendulum tilt).
 m_pend.append(m_gondola)
 L_pend.append(L_gondola)
 I_pend.append(0.5 * m_gondola * R_gondola ** 2 + (1.0 / 12.0) * m_gondola * L_gondola ** 2)
@@ -130,11 +195,15 @@ def mu_p(k):
     return sum(m_pend[k:N_p])
 
 
-# Element-length list with balloon special case (CG offset rho)
+# rho = fractional CG position along the balloon body (0 = top, 1 = bottom).
+# For a sphere, rho = 0.5 (CG at centre).  This sets the effective moment arm
+# of the balloon's mass in the stiffness and mass matrix expressions.
 rho   = 0.5
 Llist = list(L_pend)
-Llist[0] = (1.0 - rho) * L_pend[0]
+Llist[0] = (1.0 - rho) * L_pend[0]   # distance from balloon hinge to balloon CG
 
+# Pre-compute cumulative hanging masses for all chain positions.
+# mulist[i] = total mass at or below hinge i.  Used heavily in Mx and Kx.
 mulist = [mu_p(i) for i in range(N_p + 1)]
 
 # --- Mass matrix Mx ---------------------------------------------------
@@ -153,19 +222,31 @@ mulist = [mu_p(i) for i in range(N_p + 1)]
 Mx = np.zeros((DOF_p, DOF_p))
 for i in range(DOF_p):
     if i == 0:
+        # Row 0 = lateral translation y1.
+        # The coupling between y1 and tilt angle theta_j (column j>=2) is the
+        # horizontal CG displacement of all mass hanging below hinge j when
+        # theta_j changes: (0.5*m_j + mu_p(j+1)) * L_j.
         for j in range(2, DOF_p):
             Mx[i, j] = (0.5 * m_pend[j - 1] + mulist[j]) * Llist[j - 1]
     else:
+        # Diagonal: own rotational inertia I_i plus the parallel-axis term for
+        # all mass hanging below hinge i, at moment-arm Llist[i-1].
         Mx[i, i] = (I_pend[i - 1] + ((rho ** 2) * m_pend[i - 1] + mulist[i]) * (Llist[i - 1] ** 2))
+        # Off-diagonal (i<j): two different tilt angles share a portion of the
+        # swinging chain.  The coupling term is the product of their moment arms
+        # times the common hanging mass.
         for j in range(2, DOF_p):
             if j > i:
                 Mx[i, j] = (0.5 * m_pend[j - 1] + mulist[j]) * Llist[i - 1] * Llist[j - 1]
 
-Mx[0, 0] = mu_p(0)
-Mx[0, 1] = Llist[0] * mu_p(1)
-Mx[1, 1] = I_pend[0] + Llist[0] ** 2 * mu_p(1)
+# Special top-of-chain entries (balloon row/column handled separately
+# because the balloon CG offset rho alters the standard expression).
+Mx[0, 0] = mu_p(0)                             # total mass (y1 inertia)
+Mx[0, 1] = Llist[0] * mu_p(1)                 # y1 <-> balloon-tilt coupling
+Mx[1, 1] = I_pend[0] + Llist[0] ** 2 * mu_p(1)  # balloon-tilt diagonal
 
-# Symmetrize
+# Mirror the upper triangle to the lower triangle to enforce symmetry.
+# The formula below copies upper->lower without double-counting the diagonal.
 Mx = (Mx + Mx.T) - np.diag(np.diag(Mx))
 
 # --- Stiffness matrix Kx ---------------------------------------------
@@ -182,23 +263,42 @@ Mx = (Mx + Mx.T) - np.diag(np.diag(Mx))
 Kx = np.zeros((DOF_p, DOF_p))
 for i in range(DOF_p):
     if i == 0:
+        # y1 has NO restoring force.  The chain can drift laterally without
+        # any horizontal spring pulling it back (no aerodynamic drag modelled).
         Kx[i, i] = 0.0
     elif i == 1:
+        # Balloon tilt stiffness: gravitational restoring term (hanging mass
+        # below the balloon hinge × g × moment arm) MINUS the destabilising
+        # buoyancy term (lamb × total mass × g × moment arm).
+        # If lamb > 0 the buoyancy centre is above the CG, which destabilises
+        # the balloon tilt and reduces the effective stiffness.
         Kx[i, i] = (1.0 - rho) * g * L_pend[0] * mulist[1] - lamb * g * L_pend[0] * mulist[0]
     else:
+        # Tether segment and gondola tilt stiffnesses: standard pendulum formula.
+        # Each hinge i is restrained by the weight of everything hanging below it.
         Kx[i, i] = (rho * m_pend[i - 1] + mulist[i]) * g * L_pend[i - 1]
 
 
 # ==================================
 # 4. BUILD TORSION MODEL  (Mz, Kz)
 # ==================================
+# Physical picture:
+#   The same chain now carries a TWIST (yaw rotation about the vertical axis).
+#   The cables act like torsional springs.  The restoring torque comes from
+#   gravity: tilting a twisted cable pair under gravity produces a net torque
+#   that tries to unwind the twist (bifilar pendulum effect — see Kassarian 2021).
+#
 # Discretization (kept identical to DSE_Structures_Torsion.py):
-#   N_nodes_torsion    = N_tether_torsion + 2
-#   N_elements_torsion = N_nodes_torsion - 1
+#   N_nodes_torsion    = N_tether_torsion + 2  (balloon node + cable nodes + gondola node)
+#   N_elements_torsion = N_nodes_torsion - 1   (one element per cable span)
 #
 # Coordinate vector:  z = [ theta_0, theta_1, ..., theta_{N-1} ]
-#   - theta_0  : balloon yaw (free)
-#   - theta_{-1}: gondola yaw
+#   - theta_0      : yaw angle of the balloon (can rotate freely)
+#   - theta_1..-2  : yaw angles of the cable nodes
+#   - theta_{N-1}  : yaw angle of the gondola (the quantity we care about most)
+#
+# Equations of motion:
+#   Mz·z̈ + Cz·ż + Kz·z = Tz(t)
 
 N_nodes_torsion    = N_tether_torsion + 2
 N_elements_torsion = N_nodes_torsion - 1
@@ -229,33 +329,56 @@ def M_below_t(e):
 
 
 # --- Mass matrix Mz ---
+# Each cable element contributes a consistent mass matrix for a bar rotating
+# about its end.  For element e connecting nodes i and j, the element yaw
+# inertia is I_e = m_e * r^2 (all mass treated as a thin ring at radius r).
+# The 2×2 consistent element mass matrix is:
+#   I_e * [[1/3, 1/6],   <- diagonal (self) terms: 1/3 of element inertia
+#          [1/6, 1/3]]   <- off-diagonal (coupled) terms: 1/6 of element inertia
+# The balloon and gondola rigid-body inertias are added to their own diagonal.
 Mz = np.zeros((N_nodes_torsion, N_nodes_torsion))
-Mz[0, 0]   += I_balloon_z
-Mz[-1, -1] += I_gondola_z
+Mz[0, 0]   += I_balloon_z    # balloon spin inertia (thin shell about axis)
+Mz[-1, -1] += I_gondola_z    # gondola spin inertia (solid cylinder about axis)
 for e in range(N_elements_torsion):
     i, j = e, e + 1
-    I_e = m_element_t[e] * r_element_t[e] ** 2
-    Mz[i, i] += I_e / 3.0
-    Mz[j, j] += I_e / 3.0
-    Mz[i, j] += I_e / 6.0
-    Mz[j, i] += I_e / 6.0
+    I_e = m_element_t[e] * r_element_t[e] ** 2   # element yaw inertia
+    Mz[i, i] += I_e / 3.0    # self-term at node i
+    Mz[j, j] += I_e / 3.0    # self-term at node j (consistent mass: 1/3 of I_e)
+    Mz[i, j] += I_e / 6.0    # coupling i<->j
+    Mz[j, i] += I_e / 6.0    # (Mz is symmetric by construction)
 
 # --- Stiffness matrix Kz and per-element stiffnesses ---
+# The bifilar (multi-cable) torsional stiffness of element e comes from
+# Kassarian et al. (2021), Section 2.2.  The formula is:
+#
+#   k_e = (M_below + 0.5 * m_element) * g * r^2 / L_element
+#
+# where M_below is the total mass hanging BELOW element e (gondola + lower
+# cables), and r is the lateral distance from each cable to the yaw axis.
+# The 2×2 element stiffness matrix is a standard spring between nodes i and j:
+#   k_e * [[ 1, -1],
+#          [-1,  1]]
 Kz       = np.zeros((N_nodes_torsion, N_nodes_torsion))
-k_e_list = np.zeros(N_elements_torsion)
+k_e_list = np.zeros(N_elements_torsion)    # saved for verification check (v)
 for e in range(N_elements_torsion):
     i, j = e, e + 1
     k_e = (M_below_t(e) + 0.5 * m_element_t[e]) * g * r_element_t[e] ** 2 / L_element_t[e]
     k_e_list[e] = k_e
-    Kz[i, i] += k_e
-    Kz[j, j] += k_e
-    Kz[i, j] -= k_e
-    Kz[j, i] -= k_e
+    Kz[i, i] += k_e     # spring pulls node i back
+    Kz[j, j] += k_e     # spring pulls node j back
+    Kz[i, j] -= k_e     # coupling: twisting i also pulls j
+    Kz[j, i] -= k_e     # (Kz is symmetric)
 
 
 # ==================================
 # 5. MODAL ANALYSIS AND DAMPING
 # ==================================
+# Modal analysis solves K·Φ = λ·M·Φ, which gives the natural frequencies
+# (ω_i = √λ_i) and mode shapes (columns of Φ) of the linearised system.
+# We then build a physical-coordinate damping matrix C so that each flexible
+# mode decays at the specified damping ratio ζ, while rigid-body modes
+# (zero-frequency, e.g. free lateral drift of y1 or free balloon yaw) are
+# left undamped.
 
 def modal_decomposition(M, K, zeta, tol, label=""):
     """
@@ -312,6 +435,9 @@ def modal_decomposition(M, K, zeta, tol, label=""):
     return omega, freq, Phi, eigvals, flexible, C
 
 
+# Run modal analysis for both subsystems.
+# Returns: natural frequencies (Hz), mode shapes, all eigenvalues,
+#          flexible-mode mask, and the physical damping matrix C.
 omega_x, freq_x, Phi_x, eigvals_x, flex_x, Cx = modal_decomposition(Mx, Kx, zeta_pendulum, mode_tol, label="pendulum")
 omega_z, freq_z, Phi_z, eigvals_z, flex_z, Cz = modal_decomposition(Mz, Kz, zeta_torsion,  mode_tol, label="torsion")
 
@@ -319,13 +445,20 @@ omega_z, freq_z, Phi_z, eigvals_z, flex_z, Cz = modal_decomposition(Mz, Kz, zeta
 # ==================================
 # 6. INITIAL CONDITIONS AND DISTURBANCES
 # ==================================
+# The initial state vector is built by combining three independent inputs
+# for each subsystem.  Think of them as three separate "scenarios" that
+# can be superimposed:
+#   (a) Initial displacement  – chain already tilted / twisted at t=0
+#   (b) Initial velocity      – chain already moving at t=0
+#   (c) Impulse               – instantaneous force/torque applied at t=0
+#       (an impulse J changes the initial velocity by qdot0 += M^{-1} J)
 
 # --- Pendulum: x = [y1, theta_0, ..., theta_{N_p-1}] ---
-# Initial-condition convention (current design stage):
+# Initial-condition convention:
 #   The whole pendulum chain starts with a UNIFORM swing angle / rate.
 #   pend_initial_angle_deg and pend_initial_rate_deg_s are applied to every
-#   angular DOF (indices 1..end). The lateral translation y1 (index 0) stays
-#   at zero unless modified explicitly here.
+#   angular DOF (indices 1..end).  The lateral translation y1 (index 0) stays
+#   at zero unless you set it explicitly below.
 gondola_angle_idx = DOF_p - 1   # last theta is gondola tilt
 y1_idx            = 0
 
@@ -335,42 +468,69 @@ xdot0_pend = np.zeros(DOF_p)
 x0_pend[1:]    = np.deg2rad(pend_initial_angle_deg)
 xdot0_pend[1:] = np.deg2rad(pend_initial_rate_deg_s)
 
-# pend_impulse_Ns is a generalized lateral impulse on the y1 DOF.
-# This is NOT yet a mapped physical gondola kick.
+# pend_impulse_Ns is a lateral impulse on y1 (think: a sudden horizontal
+# wind gust integrated over its short duration).  It changes the initial
+# VELOCITY of all DOFs through the full inverse mass matrix, so some tilt
+# velocity is injected into the angle DOFs via the off-diagonal Mx terms.
+# IMPORTANT: Because the system is heavy (~250 kg), even a 1000 N·s impulse
+# only produces ~4 m/s lateral velocity — most of which stays in y1 drift.
 if pend_impulse_Ns != 0.0:
     Jx = np.zeros(DOF_p)
     Jx[y1_idx] = pend_impulse_Ns
-    xdot0_pend += np.linalg.solve(Mx, Jx)
+    xdot0_pend += np.linalg.solve(Mx, Jx)   # qdot0 += M^{-1} J
 
 # --- Torsion: z = [theta_0, ..., theta_{N-1}] ---
 z0_tors    = np.zeros(N_nodes_torsion)
 zdot0_tors = np.zeros(N_nodes_torsion)
 
 if torsion_initial_twist_deg != 0.0:
+    # Linear distribution: balloon starts at 0°, gondola starts at the
+    # specified angle.  Intermediate nodes are interpolated proportionally.
     z0_tors += np.linspace(0.0, np.deg2rad(torsion_initial_twist_deg), N_nodes_torsion)
 
-zdot0_tors[-1] += np.deg2rad(torsion_initial_yaw_rate_deg_s)
+zdot0_tors[-1] += np.deg2rad(torsion_initial_yaw_rate_deg_s)  # gondola spin
 
 if torsion_impulse_Nms != 0.0:
+    # Angular impulse applied at the gondola (bottom node only).
     Jz = np.zeros(N_nodes_torsion)
     Jz[-1] = torsion_impulse_Nms
-    zdot0_tors += np.linalg.solve(Mz, Jz)
+    zdot0_tors += np.linalg.solve(Mz, Jz)   # qdot0 += M^{-1} J
 
 
-# --- Disturbance functions (zero by default) ---
+# --- Continuous disturbance functions (zero by default) ---
+# These functions define CONTINUOUS external loads that persist during the
+# simulation.  They are called at every integrator time step.
+# To add a wind gust or a sinusoidal torque, modify these functions.
+# Examples:
+#   return np.array([F_lateral, 0, 0, 0])   # constant horizontal force on y1
+#   return np.array([0, 0, A*np.sin(2*pi*f*t)])   # sinusoidal torque on gondola
+
 def pendulum_force_input(t):
-    """Generalized force vector on the pendulum coordinates."""
+    """
+    Generalized force vector for the pendulum system at time t.
+    Length = DOF_p = N_tether_pendulum + 3.
+    Index 0 = force on y1 (lateral), indices 1..end = torques on tilt angles.
+    Set to zero for free-decay / impulse-only simulations.
+    """
     return np.zeros(DOF_p)
 
 
 def torsion_torque_input(t):
-    """Generalized torque vector on the torsion coordinates."""
+    """
+    Generalized torque vector for the torsion system at time t.
+    Length = N_nodes_torsion = N_tether_torsion + 2.
+    Index 0 = torque at balloon node, index -1 = torque at gondola.
+    Set to zero for free-decay / impulse-only simulations.
+    """
     return np.zeros(N_nodes_torsion)
 
 
 # ==================================
 # 7. TIME INTEGRATION
 # ==================================
+# Both systems are integrated in physical coordinates (no modal reduction).
+# This means the full M, C, K matrices are used at each time step, which
+# is fine for the small DOF counts used here (typically 3–10 DOFs per system).
 
 def simulate_second_order(M, C, K, force_fn, q0, qdot0, t_eval):
     """
@@ -433,6 +593,9 @@ t_z, z_hist, zdot_hist, zddot_hist = simulate_second_order(
 # ==================================
 # 8. POST-PROCESSING
 # ==================================
+# Extract the engineering quantities that matter for the design:
+#   - Pendulum: gondola tilt angle, rate, acceleration, peak cable tension
+#   - Torsion:  gondola yaw (absolute and relative to balloon), element loads
 
 # --- Pendulum: gondola tilt is the main coordinate ---
 theta_pend       = x_hist[gondola_angle_idx, :]
@@ -499,6 +662,10 @@ ts_tors_approx = settling_tors[0]
 # ==================================
 # 9. VERIFICATION AND VALIDATION CHECKS
 # ==================================
+# These checks run automatically every time the script executes.
+# They verify that the assembled matrices are physically sensible and that
+# the numerical results are trustworthy.  Any WARNING printed here should
+# be investigated before using the results for design decisions.
 
 print("=" * 72)
 print("VERIFICATION AND VALIDATION CHECKS")
@@ -602,8 +769,9 @@ print("All state histories finite (no NaN/Inf): OK")
 # ==================================
 # 9b. RIGOROUS VERIFICATION
 # ==================================
-# Independent cross-checks against analytical references.
-# These are stronger than the symmetry/positivity checks above.
+# Stronger cross-checks that compare model results against analytical
+# references or mathematical identities.  If any of these fail, something
+# is fundamentally wrong with the model — not just a tuning issue.
 
 print("\n" + "=" * 72)
 print("RIGOROUS VERIFICATION  (independent analytical cross-checks)")
@@ -615,6 +783,13 @@ print("=" * 72)
 # is a stronger test than "all eigenvalues > 0" because it also detects
 # numerical ill-conditioning that eigvalsh might smooth over.
 def cholesky_pd_check(M, name):
+    """
+    Verify that mass matrix M is symmetric positive-definite using a
+    Cholesky factorisation.  A positive-definite M is required for the
+    equations of motion to be physically meaningful (kinetic energy must
+    be positive for any non-zero velocity).
+    Returns True if the check passes, False otherwise.
+    """
     try:
         np.linalg.cholesky(0.5 * (M + M.T))
         print("  [OK] {} is symmetric positive-definite (Cholesky succeeded).".format(name))
@@ -654,6 +829,15 @@ if rel_err_period > 0.30:
 # subsystem must be NEGATIVE (energy never grows) and small relative to
 # the dominant period (no spurious growth from the integrator).
 def energy_check(M, K, q_hist, qdot_hist, zeta, name):
+    """
+    Compute total mechanical energy E(t) = 0.5 qdot^T M qdot + 0.5 q^T K q
+    at every stored time step and check that it behaves correctly:
+      - With damping (zeta > 0): E should decrease monotonically.
+      - Without damping (zeta = 0): E should be conserved (constant).
+    An unexpected INCREASE in energy would indicate a bug in the integrator
+    or a sign error in M/K.  The check is skipped if E(0) <= 0 (no initial
+    energy to track).
+    """
     E = (0.5 * np.einsum("it,ij,jt->t", qdot_hist, M, qdot_hist)
          + 0.5 * np.einsum("it,ij,jt->t", q_hist,  K, q_hist))
     if E[0] <= 0:
@@ -700,6 +884,9 @@ print("       Relative error                                    : {:7.3%}".forma
 # ==================================
 # 10. SUMMARY OUTPUT
 # ==================================
+# Formatted summary table that collects the most important design outputs
+# from both the pendulum and torsion analyses into a single printout.
+# Sections A–F are printed, followed by the raw M and K matrices.
 
 W   = 78
 sep = "+" + "-" * (W - 2) + "+"
@@ -831,6 +1018,9 @@ print(Kz)
 # ==================================
 # 11. PLOTS
 # ==================================
+# Two figure windows:
+#   Figure 1 – Pendulum: gondola tilt angle, rate, and acceleration vs time.
+#   Figure 2 – Torsion:  gondola yaw (absolute and relative to balloon) vs time.
 
 # --- Pendulum (3 plots: angle / rate / acceleration) ---
 fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
