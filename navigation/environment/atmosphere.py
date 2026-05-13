@@ -21,7 +21,7 @@ class AtmosphericState:
     wind_velocity: np.ndarray  # in the form (zonal, meridional, vertical), [m/s]
 
 
-class AtmosphereModel:
+class AtmosphereModel1D:
     def __init__(self, parquet_path, planet_radius):
 
         self.planet_radius = planet_radius

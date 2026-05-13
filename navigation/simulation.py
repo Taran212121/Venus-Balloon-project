@@ -1,8 +1,9 @@
+# %% IMPORTS
 import numpy as np
 
 from config.config_loader import load_config
 from environment.venus import VenusModel
-from environment.atmosphere import AtmosphereModel
+from environment.atmosphere import AtmosphereModel1D
 
 from propagators.balloon_propagator import (
     FollowZonalWindBalloonPropagator
@@ -13,26 +14,50 @@ from propagators.orbiter_propagator import (
 )
 
 from vehicles.balloon import BalloonState
-from analysis.visualisation import plot_orbit_3d, plot_simulation_3d, plot_link_analysis
+from analysis.visualisation import (
+    plot_link_analysis,
+    plot_orbit_3d,
+    plot_simulation_3d,
+    compute_groundtrack,
+    plot_groundtrack,
+    plot_combined_groundtrack
+)
+
 from analysis.communications import compute_link_metrics
 
 from paths import *
 
+# %% CONFIG VARIABLES
 SCENARIO = SCENARIOS_DIR / "base_scenario.yaml"
 
 ATMOSPHERE_FILE = (
     DATA_DIR / "venus_atmosphere.parquet"
 )
 
+VISUALIZATIONS = {
+
+    # 3D plots
+    "orbit_3d": False,
+    "simulation_3d": True,
+
+    # Ground tracks
+    "groundtrack_balloon": False,
+    "groundtrack_orbiter": False,
+    "groundtrack_combined": True,
+
+    # Communications
+    "link_analysis": True,
+}
 
 
+# %% MAIN
 def main():
     # Load config
     config = load_config(SCENARIO)
 
     # Environment model
     venus = VenusModel()
-    atmosphere = AtmosphereModel(
+    atmosphere = AtmosphereModel1D(
         parquet_path=ATMOSPHERE_FILE,
         planet_radius=venus.radius
     )
@@ -152,31 +177,80 @@ def main():
         ) / 1000
     )
 
-    # Plotting
-    # plot_orbit_3d(
-    #     orbiter_position_history,
-    #     venus.radius
-    # )
-
-    plot_simulation_3d(
-        orbiter_position_history,
-        balloon_history_vci,
-        venus.radius
-    )
-
-    # Link budget
+    # Analysis
     metrics = compute_link_metrics(
         time_history,
         orbiter_position_history,
         balloon_history_vci
     )
 
-    plot_link_analysis(
-        time_history,
-        metrics['distances'],
-        metrics['elevation_deg'],
-        metrics['link_available']
-    )
+    # Plotting
+    if VISUALIZATIONS["orbit_3d"]:
+
+        plot_orbit_3d(
+            orbiter_position_history,
+            venus.radius
+        )
+
+    if VISUALIZATIONS["simulation_3d"]:
+
+        plot_simulation_3d(
+            orbiter_position_history,
+            balloon_history_vci,
+            venus.radius
+        )
+
+    if VISUALIZATIONS["link_analysis"]:
+
+        plot_link_analysis(
+            time_history,
+            metrics["distances"],
+            metrics["elevation_deg"],
+            metrics["link_available"]
+        )
+
+    if VISUALIZATIONS["groundtrack_balloon"]:
+
+        plot_groundtrack(
+            latitudes_deg=balloon_history[:, 0],
+            longitudes_deg=balloon_history[:, 1],
+            label="Balloon",
+            color="crimson"
+        )
+
+    if VISUALIZATIONS["groundtrack_orbiter"]:
+
+        orbiter_lat_deg, orbiter_lon_deg = (
+            compute_groundtrack(
+                orbiter_position_history,
+                time_history,
+                venus
+            )
+        )
+
+        plot_groundtrack(
+            latitudes_deg=orbiter_lat_deg,
+            longitudes_deg=orbiter_lon_deg,
+            label="Orbiter",
+            color="royalblue"
+        )
+
+    if VISUALIZATIONS["groundtrack_combined"]:
+
+        orbiter_lat_deg, orbiter_lon_deg = (
+            compute_groundtrack(
+                orbiter_position_history,
+                time_history,
+                venus
+            )
+        )
+
+        plot_combined_groundtrack(
+            balloon_latitudes_deg=balloon_history[:, 0],
+            balloon_longitudes_deg=balloon_history[:, 1],
+            orbiter_latitudes_deg=orbiter_lat_deg,
+            orbiter_longitudes_deg=orbiter_lon_deg
+        )
 
 
 if __name__ == "__main__":
