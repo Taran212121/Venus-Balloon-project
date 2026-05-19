@@ -176,6 +176,11 @@ def main():
             orbiter_state.position
         ) / 1000
     )
+    print("Orbital period [h]: ")
+    period = np.sqrt(
+        (4 * np.pi**2 * config.orbiter.initial_orbit.semi_major_axis_m**3) / venus.mu
+    )
+    print(period / 3600)
 
     # Analysis
     metrics = compute_link_metrics(

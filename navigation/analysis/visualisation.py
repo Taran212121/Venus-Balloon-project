@@ -276,12 +276,14 @@ def plot_link_analysis(
         sharex=True
     )
 
+
+    times_days = times / (3600 * 24)
     # -----------------------------------------
     # Distance
     # -----------------------------------------
 
     axes[0].plot(
-        times,
+        times_days,
         distances / 1000
     )
 
@@ -296,7 +298,7 @@ def plot_link_analysis(
     # -----------------------------------------
 
     axes[1].plot(
-        times,
+        times_days,
         elevation_deg,
         color="darkorange"
     )
@@ -315,7 +317,7 @@ def plot_link_analysis(
 
     # Shade communication windows
     axes[1].fill_between(
-        times,
+        times_days,
         20,
         80,
         where=link_available,
@@ -327,7 +329,7 @@ def plot_link_analysis(
     )
 
     axes[1].set_xlabel(
-        "Time [s]"
+        "Time [Earth days]"
     )
 
     axes[1].grid(True)
