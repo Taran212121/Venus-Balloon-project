@@ -1,0 +1,11 @@
+zeta_torsion,dominant_torsion_period_s,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,settling_time_torsion_s,maximum_torsional_torque_Nm,maximum_torsion_element_twist_deg,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+0.001,6.708,9.11,7.997,4270.3,2.252,0.979,405.3,OK,OK,zeta_torsion,zeta_torsion,0.001
+0.0031,6.708,8.62,7.955,1373.1,2.246,0.9766,405.3,OK,OK,zeta_torsion,zeta_torsion,0.00311
+0.0052,6.708,8.62,7.929,818.1,2.245,0.9761,405.3,OK,OK,zeta_torsion,zeta_torsion,0.00522
+0.0073,6.708,8.61,7.903,582.6,2.244,0.9755,405.3,OK,OK,zeta_torsion,zeta_torsion,0.00733
+0.0094,6.708,8.61,7.877,452.4,2.243,0.975,405.3,OK,OK,zeta_torsion,zeta_torsion,0.00944
+0.0116,6.708,8.61,7.851,369.4,2.241,0.9745,405.3,OK,OK,zeta_torsion,zeta_torsion,0.01156
+0.0137,6.708,8.61,7.825,312.4,2.24,0.974,405.3,OK,OK,zeta_torsion,zeta_torsion,0.01367
+0.0158,6.708,8.61,7.799,270.6,2.239,0.9735,405.3,OK,OK,zeta_torsion,zeta_torsion,0.01578
+0.0179,6.708,8.61,7.774,238.7,2.238,0.973,405.3,OK,OK,zeta_torsion,zeta_torsion,0.01789
+0.02,6.708,8.61,7.748,213.5,2.237,0.9726,405.3,OK,OK,zeta_torsion,zeta_torsion,0.02

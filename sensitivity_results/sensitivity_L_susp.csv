@@ -1,0 +1,10 @@
+L_susp,dominant_pendulum_period_s,dominant_torsion_period_s,max_gondola_swing_angle_deg,max_gondola_swing_rate_deg_s,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,peak_per_cable_tension_N,maximum_torsional_torque_Nm,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+8.0,10.513,4.899,9.33,13.58,8.73,10.594,231.2,4.045,555.0,FAIL,L_susp>=10m,L_susp,L_susp,8.0
+9.75,10.631,5.408,8.88,12.22,8.84,9.676,231.2,3.362,502.8,FAIL,L_susp>=10m,L_susp,L_susp,9.75
+11.5,10.754,5.873,8.94,10.67,8.93,8.991,230.2,2.881,462.9,OK,OK,L_susp,L_susp,11.5
+13.25,10.882,6.304,8.99,10.73,8.99,8.442,231.9,2.525,431.3,OK,OK,L_susp,L_susp,13.25
+15.0,11.016,6.708,9.04,9.6,9.11,7.997,230.5,2.252,405.3,OK,OK,L_susp,L_susp,15.0
+16.75,11.154,7.088,9.08,8.56,9.21,7.625,229.1,2.036,383.6,OK,OK,L_susp,L_susp,16.75
+18.5,11.297,7.449,9.12,8.89,9.26,7.313,231.2,1.853,365.0,OK,OK,L_susp,L_susp,18.5
+20.25,11.444,7.794,9.16,8.52,9.36,7.048,231.3,1.714,348.9,OK,OK,L_susp,L_susp,20.25
+22.0,11.595,8.123,9.2,7.84,9.46,6.816,230.3,1.592,334.7,OK,OK,L_susp,L_susp,22.0

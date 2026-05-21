@@ -1,0 +1,10 @@
+m_gondola,dominant_pendulum_period_s,dominant_torsion_period_s,max_gondola_swing_angle_deg,max_gondola_swing_rate_deg_s,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,peak_total_cable_tension_N,peak_per_cable_tension_N,dynamic_static_tension_ratio,maximum_torsional_torque_Nm,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+50.0,74.478,6.718,9.13,9.98,8.68,8.013,466.9,116.7,1.054,1.151,287.2,OK,OK,m_gondola,m_gondola,50.0
+81.2,13.087,6.712,9.07,9.59,8.95,8.006,750.4,187.6,1.05,1.836,365.4,OK,OK,m_gondola,m_gondola,81.2
+112.5,10.223,6.705,9.02,10.2,9.22,7.998,1043.4,260.8,1.056,2.523,429.8,OK,OK,m_gondola,m_gondola,112.5
+143.8,9.011,6.699,8.98,10.9,9.49,7.998,1342.0,335.5,1.064,3.203,485.8,OK,OK,m_gondola,m_gondola,143.8
+175.0,8.281,6.692,8.94,10.21,9.75,7.994,1619.5,404.9,1.056,3.895,535.8,OK,OK,m_gondola,m_gondola,175.0
+206.2,7.761,6.686,8.91,12.1,10.02,7.989,1948.1,487.0,1.079,4.581,581.5,FAIL,yaw<=10deg,m_gondola,m_gondola,206.2
+237.5,7.355,6.68,8.89,10.73,10.28,7.986,2205.6,551.4,1.061,5.284,624.0,FAIL,yaw<=10deg,m_gondola,m_gondola,237.5
+268.8,7.022,6.673,8.97,12.07,10.54,7.987,2532.2,633.0,1.077,5.959,663.7,FAIL,yaw<=10deg,m_gondola,m_gondola,268.8
+300.0,6.74,6.667,8.84,13.73,10.8,7.983,2889.2,722.3,1.102,6.652,701.1,FAIL,yaw<=10deg,m_gondola,m_gondola,300.0

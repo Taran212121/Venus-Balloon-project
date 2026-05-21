@@ -62,25 +62,25 @@ import matplotlib.pyplot as plt
 
 # --- Shared physical parameters ---
 m_balloon = 200.0          # kg     balloon mass
-L_balloon = 5.0            # m      balloon diameter (thin spherical shell)
+L_balloon = 9.0            # m      balloon diameter (thin spherical shell)
 
-m_gondola = 200.0           # kg     gondola mass
-R_gondola = 0.2            # m      gondola radius (vertical thin cylinder)
+m_gondola = 400.0           # kg     gondola mass
+R_gondola = 2.8            # m      gondola radius (vertical thin cylinder)
 L_gondola = 0.6            # m      gondola length
 
-L_susp = 3.0               # m      total suspension length (balloon -> gondola)
+L_susp = 15.0               # m      total suspension length (balloon -> gondola)
 
 # Discretization fidelity (kept independent for the two physics)
 # Increase these for a finer mesh (more segments = more DOFs = slower, but
 # more accurate for distributed cable mass effects).  1 is sufficient for
 # preliminary design.  They do NOT need to be equal to each other.
-N_tether_pendulum = 1      # number of internal tether segments in pendulum chain
-N_tether_torsion  = 1      # number of internal tether segments in torsion chain
+N_tether_pendulum = 8      # number of internal tether segments in pendulum chain
+N_tether_torsion  = 8      # number of internal tether segments in torsion chain
 
 # Cable / suspension geometry
 N_cables          = 4      # physical number of cables (bifilar / multifilar)
 m_one_cable_total = 0.2    # kg     mass of ONE complete cable over L_susp
-r                 = 0.25   # m      cable radius from yaw axis (torsion)
+r                 = 1   # m      cable radius from yaw axis (torsion)
 
 # Environment
 g = 8.72                   # m/s^2  Venus gravity at ~52 km
@@ -112,17 +112,17 @@ t_eval  = np.arange(0.0, t_final + dt, dt)
 #     NOTE: this impulse acts on the lateral DOF y1, NOT directly on the
 #     gondola tilt angle.  To see a visible tilt response you need a large
 #     impulse (~hundreds of N·s) because the system inertia is ~250 kg.
-pend_initial_angle_deg  = 0.0    # deg     uniform initial chain swing angle
-pend_initial_rate_deg_s = 0.0    # deg/s   uniform initial chain swing rate
-pend_impulse_Ns         = 1000.0 # N s     generalized lateral impulse on y1
+pend_initial_angle_deg  = 4.0    # deg     uniform initial chain swing angle
+pend_initial_rate_deg_s = 1.0    # deg/s   uniform initial chain swing rate
+pend_impulse_Ns         = 100.0 # N s     generalized lateral impulse on y1
 
 # --- Torsion disturbance inputs (combine freely) ---
 # torsion_initial_twist_deg applies a linearly distributed pre-twist from
 # balloon (0°) to gondola (the specified value).  This mimics a wound-up
 # cable scenario.  The angular impulse is applied directly to the gondola.
-torsion_initial_twist_deg     = 0.0   # deg     stored twist (linearly distributed)
-torsion_initial_yaw_rate_deg_s = 0.0  # deg/s   gondola initial yaw rate
-torsion_impulse_Nms           = 1.0   # N m s   angular impulse at gondola
+torsion_initial_twist_deg     = 5.0   # deg     stored twist (linearly distributed)
+torsion_initial_yaw_rate_deg_s = 1.0  # deg/s   gondola initial yaw rate
+torsion_impulse_Nms           = 100.0   # N m s   angular impulse at gondola
 
 # Numerical tolerance for separating rigid-body modes
 mode_tol = 1e-8

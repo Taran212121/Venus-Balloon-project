@@ -1,0 +1,5 @@
+gondola_shape,gondola_reference_size,I_gondola_tilt,I_gondola_yaw,dominant_pendulum_period_s,dominant_torsion_period_s,max_gondola_swing_angle_deg,max_gondola_swing_rate_deg_s,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,peak_per_cable_tension_N,maximum_torsional_torque_Nm,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+cube,side=1.00,16.7,16.7,11.016,6.708,9.04,9.6,9.11,7.997,230.5,2.252,405.3,OK,OK,gondola_shape,gondola_shape,cube
+rectangular_box,"a=1.78, b=1.19, c=0.47",20.9,38.1,10.996,10.087,9.8,11.74,10.81,5.749,235.6,2.428,405.3,FAIL,yaw<=10deg,gondola_shape,gondola_shape,rectangular_box
+solid_cylinder,"R=0.54, h=1.08",17.1,14.7,11.019,6.3,9.02,8.75,8.9,8.453,228.7,2.229,405.3,OK,OK,gondola_shape,gondola_shape,solid_cylinder
+solid_sphere,R=0.62,15.4,15.4,11.025,6.449,8.95,8.75,8.97,8.276,228.9,2.236,405.3,OK,OK,gondola_shape,gondola_shape,solid_sphere

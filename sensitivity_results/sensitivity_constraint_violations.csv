@@ -1,0 +1,9 @@
+sweep_name,varied_parameter,varied_value,violations
+L_susp,L_susp,8.0,L_susp>=10m
+L_susp,L_susp,9.75,L_susp>=10m
+r,r,0.3,yaw<=10deg
+m_gondola,m_gondola,206.2,yaw<=10deg
+m_gondola,m_gondola,237.5,yaw<=10deg
+m_gondola,m_gondola,268.8,yaw<=10deg
+m_gondola,m_gondola,300.0,yaw<=10deg
+gondola_shape,gondola_shape,rectangular_box,yaw<=10deg

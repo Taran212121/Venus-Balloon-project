@@ -42,7 +42,7 @@ L_gondola = 0.6            # m      gondola length (kept for reference)
 L_susp            = 3.0    # m      total suspension length (balloon -> gondola)
 N_tether          = 5      # -      numerical torsion discretization fidelity - number of the internal nodes in the cable
                            #.       total number of nodes = N_tether + 2 (balloon yaw node + gondola yaw node) - nodes = degrees of freedom
-N_cables          = 2      # -      physical number of cables (bifilar / multifilar)
+N_cables          = 5      # -      physical number of cables (bifilar / multifilar)
 m_one_cable_total = 0.2    # kg     mass of ONE complete cable over L_susp
 r                 = 0.25   # m      identical cable radius from yaw axis
 

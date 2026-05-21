@@ -1,0 +1,7 @@
+N_cables,dominant_pendulum_period_s,dominant_torsion_period_s,max_gondola_swing_angle_deg,max_gondola_swing_rate_deg_s,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,peak_total_cable_tension_N,peak_per_cable_tension_N,dynamic_static_tension_ratio,maximum_torsional_torque_Nm,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+3,11.032,6.708,9.03,9.54,9.11,8.004,919.6,306.5,1.048,2.234,467.8,OK,OK,N_cables,N_cables,3
+4,11.016,6.708,9.04,9.6,9.11,7.997,921.9,230.5,1.049,2.252,405.3,OK,OK,N_cables,N_cables,4
+5,11.0,6.708,9.04,9.65,9.11,8.003,924.3,184.9,1.049,2.262,362.7,OK,OK,N_cables,N_cables,5
+6,10.984,6.708,9.05,9.71,9.11,8.003,926.7,154.4,1.05,2.287,331.3,OK,OK,N_cables,N_cables,6
+7,10.969,6.708,9.06,9.79,9.11,7.997,929.3,132.8,1.051,2.298,306.9,OK,OK,N_cables,N_cables,7
+8,10.953,6.708,9.07,9.82,9.11,7.989,931.5,116.4,1.051,2.303,287.2,OK,OK,N_cables,N_cables,8

@@ -1,0 +1,11 @@
+r_attach,dominant_torsion_period_s,dominant_torsion_frequency_hz,max_gondola_yaw_deg,max_gondola_yaw_rate_deg_s,maximum_torsional_torque_Nm,maximum_torsion_element_twist_deg,dominant_pendulum_period_s,max_gondola_swing_angle_deg,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+0.3,11.165,0.0896,10.2,5.366,0.901,1.0899,11.016,9.04,405.3,FAIL,yaw<=10deg,r,r,0.3
+0.54,6.167,0.1621,9.02,8.602,2.639,0.97,11.016,9.04,405.3,OK,OK,r,r,0.544
+0.79,4.263,0.2346,8.57,12.052,5.409,0.9444,11.016,9.04,405.3,OK,OK,r,r,0.789
+1.03,3.268,0.306,8.32,15.538,9.163,0.9333,11.016,9.04,405.4,OK,OK,r,r,1.033
+1.28,2.653,0.377,8.11,19.028,13.961,0.929,11.016,9.04,405.4,OK,OK,r,r,1.278
+1.52,2.239,0.4466,8.07,22.45,19.853,0.9315,11.016,9.04,405.4,OK,OK,r,r,1.522
+1.77,1.941,0.5153,8.04,25.824,26.709,0.9297,11.016,9.04,405.4,OK,OK,r,r,1.767
+2.01,1.717,0.5823,8.01,29.077,35.425,0.9521,11.016,9.04,405.4,OK,OK,r,r,2.011
+2.26,1.543,0.6481,8.0,32.231,45.274,0.9668,11.016,9.04,405.4,OK,OK,r,r,2.256
+2.5,1.404,0.712,8.0,35.493,55.46,0.9645,11.016,9.04,405.4,OK,OK,r,r,2.5

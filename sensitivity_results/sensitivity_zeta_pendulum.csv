@@ -1,0 +1,11 @@
+zeta_pendulum,dominant_pendulum_period_s,max_gondola_swing_angle_deg,max_gondola_swing_rate_deg_s,settling_time_pendulum_s,peak_per_cable_tension_N,required_imu_sampling_10x_hz,feasible,violations,sweep_name,varied_parameter,varied_value
+0.001,11.016,9.16,10.18,7013.0,231.8,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.001
+0.0031,11.016,9.04,9.87,2255.0,231.1,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.00311
+0.0052,11.016,9.04,9.57,1343.5,230.4,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.00522
+0.0073,11.016,9.03,9.28,956.8,229.8,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.00733
+0.0094,11.016,9.03,9.01,742.9,229.2,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.00944
+0.0116,11.016,9.03,8.75,606.7,228.7,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.01156
+0.0137,11.016,9.03,8.51,513.0,228.2,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.01367
+0.0158,11.016,9.02,8.28,444.4,227.8,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.01578
+0.0179,11.016,9.02,8.07,392.0,227.4,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.01789
+0.02,11.016,9.02,7.86,350.7,227.0,405.3,OK,OK,zeta_pendulum,zeta_pendulum,0.02
