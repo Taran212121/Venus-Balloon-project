@@ -6,7 +6,8 @@ from environment.venus import VenusModel
 from environment.atmosphere import AtmosphereModel1D
 
 from propagators.balloon_propagator import (
-    FollowZonalWindBalloonPropagator
+    FollowZonalWindBalloonPropagator,
+    FollowAllWindsBalloonPropagator
 )
 
 from propagators.orbiter_propagator import (
@@ -71,7 +72,7 @@ def main():
 
     # Propagators
     balloon_propagator = (
-        FollowZonalWindBalloonPropagator(
+        FollowAllWindsBalloonPropagator(
             venus_model=venus
         )
     )
