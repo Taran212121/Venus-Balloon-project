@@ -32,7 +32,7 @@ from analysis.visualisation import (
     plot_balloon_altitude
 )
 
-from tools.altitude_functions import
+from tools.trajectory_functions import test_trajectory
 
 from analysis.communications import compute_link_metrics, generate_link_report
 
@@ -113,7 +113,8 @@ def main():
     balloon_propagator = (
         WindFollowingBalloonPropagator(
             venus_model=venus,
-            vertical_controller=DensityTrackingController(envelope_density=0.95)  # [kg/m^3]
+            vertical_controller=ScriptedAltitudeController(altitude_function=test_trajectory, max_vertical_velocity=1.0),
+            # vertical_controller=DensityTrackingController(1.1),
         )
     )
 

@@ -4,6 +4,7 @@ import numpy as np
 
 from vehicles.balloon import BalloonState
 from environment.atmosphere import AtmosphereModel, AtmosphericState
+from tools.trajectory_functions import TrajectoryFunction
 
 
 class BalloonPropagator(ABC):
@@ -11,7 +12,7 @@ class BalloonPropagator(ABC):
         pass
 
     @abstractmethod
-    def step(self, state: BalloonState, dt: float, env: AtmosphereModel, t: float = 0.0):
+    def step(self, state: BalloonState, dt: float, env: AtmosphereModel):
         pass
 
 
@@ -20,7 +21,7 @@ class VerticalController(ABC):
         pass
     
     @abstractmethod
-    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState, t: float) -> float:
+    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState) -> float:
         """Compute the commanded vertical velocity [m/s]"""
         pass
 
@@ -30,13 +31,13 @@ class WindFollowingBalloonPropagator(BalloonPropagator):
         self.planet_radius = venus_model.radius
         self.vertical_controller = vertical_controller
 
-    def step(self, state, dt, env, t=0):
+    def step(self, state, dt, env):
         
         atmospheric_state = env.sample_lat_lon_alt(
-            state.longitude_deg,
             state.latitude_deg,
+            state.longitude_deg,
             state.altitude_m,
-            t
+            state.time_s
         )
         
         zonal_velocity = atmospheric_state.wind_velocity[0]
@@ -45,8 +46,7 @@ class WindFollowingBalloonPropagator(BalloonPropagator):
         
         vertical_velocity = self.vertical_controller.vertical_velocity(
             state,
-            atmospheric_state,
-            t
+            atmospheric_state
         )
 
         latitude_rad = np.radians(state.latitude_deg)
@@ -70,22 +70,26 @@ class WindFollowingBalloonPropagator(BalloonPropagator):
         delta_altitude = vertical_velocity * dt
         altitude_next = state.altitude_m + delta_altitude
 
+        # Time
+        time_next = state.time_s + dt
+
         return BalloonState(
             latitude_deg=latitude_next,
             longitude_deg=longitude_next,
-            altitude_m=altitude_next
+            altitude_m=altitude_next,
+            time_s=time_next
         )
     
 
 class ConstantAltitudeController(VerticalController):
 
-    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState, t: float) -> float:
+    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState) -> float:
         return 0.0
     
 
 class VerticalWindController(VerticalController):
 
-    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState, t: float) -> float:
+    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState) -> float:
         return atmospheric_state.wind_velocity[2]
     
 
@@ -94,20 +98,20 @@ class DensityTrackingController(VerticalController):
         self.envelope_density = envelope_density
         self.velocity_gain = velocity_gain
 
-    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState, t: float) -> float:
+    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState) -> float:
         rho_env = atmospheric_state.density
         return ((rho_env - self.envelope_density) / rho_env) * self.velocity_gain
 
 
 class ScriptedAltitudeController(VerticalController):
-    def __init__(self, altitude_function, gain=0.01, max_vertical_velocity=None):
+    def __init__(self, altitude_function: TrajectoryFunction, gain=0.01, max_vertical_velocity=None):
         self.altitude_function = altitude_function
         self.gain = gain
         self.max_vertical_velocity = max_vertical_velocity
 
-    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState, t: float) -> float:
+    def vertical_velocity(self, state: BalloonState, atmospheric_state: AtmosphericState) -> float:
         
-        target = self.altitude_function(t)
+        target = self.altitude_function(state.time_s)
         error = target - state.altitude_m
         velocity = self.gain * error
 

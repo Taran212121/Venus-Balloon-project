@@ -296,6 +296,9 @@ class AtmosphereModelFullVCD(AtmosphereModel):
             self.extvar_keys,
         )
 
+        # NOTE: Very risky thing happening here, the document declares to keep the seed constant
+        # self.perturb_seed = seed_out
+
         if ier != 0:
             raise RuntimeError(f"VCD failed at lat={lat}, lon={lon}, alt={alt}, ier={ier}")
 

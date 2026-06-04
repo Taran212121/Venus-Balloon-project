@@ -9,6 +9,7 @@ class BalloonState:
     latitude_deg: float
     longitude_deg: float
     altitude_m: float
+    time_s: float = 0.0 
 
     def to_vci(self, t, venus_model) -> np.ndarray:
         vcf = geodetic_to_cartesian(

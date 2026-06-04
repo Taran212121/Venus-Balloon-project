@@ -1,13 +1,13 @@
 scenario:
-  name: "density_control_test"
+  name: "single_scenario"
 
 planet:
   body: venus
 
 simulation:
   start_time: "2035-01-01T00:00:00Z"
-  duration_days: 1500
-  dt_s: 120
+  duration_days: 30
+  dt_s: 60
 
 balloon:
   initial:

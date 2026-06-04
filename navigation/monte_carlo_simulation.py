@@ -26,10 +26,10 @@ from paths import *
 
 SCENARIO = SCENARIOS_DIR / "monte_carlo_scenario.yaml"
 
-N_MONTE_CARLO_RUNS = 100
+N_MONTE_CARLO_RUNS = 10
 
 OUTPUT_FILE = (
-    OUT_DIR / "gigantic_monte_carlo.npz"
+    OUT_DIR / "tiny_monte_carlo.npz"
 )
 
 
