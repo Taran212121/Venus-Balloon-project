@@ -51,12 +51,7 @@ class TwoBodyNewtonPropagator(OrbiterPropagator):
         r3 = r2 * np.sqrt(r2)
         return -self.mu * r / r3
 
-    def step(
-        self,
-        state,
-        dt,
-        env
-    ):
+    def step(self, state, dt, env):
         """
         Perform one symplectic integration step.
         """

@@ -48,7 +48,9 @@ def load_config(path: Path) -> ScenarioConfig:
                 raan_deg=data["orbiter"]["initial_orbit"]["raan_deg"],
                 argument_of_periapsis_deg=data["orbiter"]["initial_orbit"]["argument_of_periapsis_deg"],
                 true_anomaly_deg=data["orbiter"]["initial_orbit"]["true_anomaly_deg"],
-            )
+            ),
+            min_elevation_deg=data["orbiter"]["min_elevation_deg"],
+            max_elevation_deg=data["orbiter"]["max_elevation_deg"],
         ),
     )
 

@@ -3,11 +3,16 @@ import numpy as np
 
 from config.config_loader import load_config
 from environment.venus import VenusModel
-from environment.atmosphere import AtmosphereModel1D
+from environment.atmosphere import (
+    AtmosphereModel1D,
+    AtmosphereModelSurrogateVCD,
+    AtmosphereModelFullVCD
+)
 
 from propagators.balloon_propagator import (
     FollowZonalWindBalloonPropagator,
-    FollowAllWindsBalloonPropagator
+    FollowAllWindsBalloonPropagator,
+    WindsAndDensityBalloonPropagator,
 )
 
 from propagators.orbiter_propagator import (
@@ -16,15 +21,16 @@ from propagators.orbiter_propagator import (
 
 from vehicles.balloon import BalloonState
 from analysis.visualisation import (
-    plot_link_analysis,
+    plot_link_track,
     plot_orbit_3d,
     plot_simulation_3d,
     compute_groundtrack,
     plot_groundtrack,
-    plot_combined_groundtrack
+    plot_combined_groundtrack,
+    plot_balloon_altitude
 )
 
-from analysis.communications import compute_link_metrics
+from analysis.communications import compute_link_metrics, generate_link_report
 
 from paths import *
 
@@ -33,6 +39,10 @@ SCENARIO = SCENARIOS_DIR / "base_scenario.yaml"
 
 ATMOSPHERE_FILE = (
     DATA_DIR / "venus_atmosphere.parquet"
+)
+
+VCD_ARCHIVE_FILE = (
+    DATA_DIR / "vcd_climatology_40km_70km.npz"
 )
 
 VISUALIZATIONS = {
@@ -46,9 +56,24 @@ VISUALIZATIONS = {
     "groundtrack_orbiter": False,
     "groundtrack_combined": True,
 
+    # Balloon tracking
+    "balloon_altitude": True,
+
     # Communications
-    "link_analysis": True,
+    "link_plot": True,
+    "link_analysis": False,
 }
+
+# VCD config
+vcd_config = {
+    'hires_key': 0,
+    'EUV_scena': 1,
+    'albedo_scena': 1,
+    'perturb_key': 2,
+    'perturb_seed': 42
+}
+vcd_config['perturb_gw_length'] = 10000.0 if vcd_config['perturb_key'] in (1, 3) else 0 
+
 
 
 # %% MAIN
@@ -58,8 +83,18 @@ def main():
 
     # Environment model
     venus = VenusModel()
-    atmosphere = AtmosphereModel1D(
-        parquet_path=ATMOSPHERE_FILE,
+    # atmosphere = AtmosphereModel1D(
+    #     parquet_path=ATMOSPHERE_FILE,
+    #     planet_radius=venus.radius
+    # )
+    # atmosphere = AtmosphereModelSurrogateVCD(
+    #     npz_path=VCD_ARCHIVE_FILE,
+    #     planet_radius=venus.radius
+    # )
+
+    vcd_config['start_date'] = config.simulation.start_time
+    atmosphere = AtmosphereModelFullVCD(
+        vcd_config=vcd_config,
         planet_radius=venus.radius
     )
 
@@ -72,8 +107,9 @@ def main():
 
     # Propagators
     balloon_propagator = (
-        FollowAllWindsBalloonPropagator(
-            venus_model=venus
+        WindsAndDensityBalloonPropagator(
+            venus_model=venus,
+            envelope_density=0.95  # [kg/m^3]
         )
     )
 
@@ -100,10 +136,14 @@ def main():
     orbiter_position_history = []
     orbiter_velocity_history = []
 
+    # Debug
+    # print(atmosphere.sample_lat_lon_alt(0,0,50000,0))
+    # print(atmosphere.data["rho"])
+
     # Simulation loop
     t = 0.0
     for step in range(n_steps):
-        if step % 10_000 == 0:
+        if step % 5_000 == 0:
             print(f"Step: {step}")
 
         # Store histories
@@ -187,7 +227,9 @@ def main():
     metrics = compute_link_metrics(
         time_history,
         orbiter_position_history,
-        balloon_history_vci
+        balloon_history_vci,
+        min_elevation_deg=config.orbiter.min_elevation_deg,
+        max_elevation_deg=config.orbiter.max_elevation_deg,
     )
 
     # Plotting
@@ -207,12 +249,25 @@ def main():
         )
 
     if VISUALIZATIONS["link_analysis"]:
+        
+        generate_link_report(
+            time_history,
+            orbiter_position_history,
+            balloon_history_vci,
+            scenario_name=config.scenario.name,
+            min_elevation_deg=config.orbiter.min_elevation_deg,
+            max_elevation_deg=config.orbiter.max_elevation_deg,
+        )
 
-        plot_link_analysis(
+    if VISUALIZATIONS["link_plot"]:
+
+        plot_link_track(
             time_history,
             metrics["distances"],
             metrics["elevation_deg"],
-            metrics["link_available"]
+            metrics["link_available"],
+            min_elevation_deg=config.orbiter.min_elevation_deg,
+            max_elevation_deg=config.orbiter.max_elevation_deg,
         )
 
     if VISUALIZATIONS["groundtrack_balloon"]:
@@ -221,7 +276,7 @@ def main():
             latitudes_deg=balloon_history[:, 0],
             longitudes_deg=balloon_history[:, 1],
             label="Balloon",
-            color="crimson"
+            color="magenta"
         )
 
     if VISUALIZATIONS["groundtrack_orbiter"]:
@@ -258,6 +313,16 @@ def main():
             orbiter_longitudes_deg=orbiter_lon_deg
         )
 
+    if VISUALIZATIONS["balloon_altitude"]:
 
+        plot_balloon_altitude(
+            balloon_positions=balloon_history,
+            times=time_history,
+            planet_radius=venus.radius,
+            target_altitude=55_000,
+            tolerance=15_000
+        )
+
+# %% RUN
 if __name__ == "__main__":
     main()

@@ -13,9 +13,11 @@ TOOLS_DIR = ROOT / "tools"
 # Data
 DATA_DIR = ROOT / "data"
 SCENARIOS_DIR = ROOT / "scenarios"
+OUT_DIR = ROOT / "out"
 
 DATA_DIR.mkdir(exist_ok=True)
 SCENARIOS_DIR.mkdir(exist_ok=True)
+OUT_DIR.mkdir(exist_ok=True)
 
 
 if __name__ == "__main__":

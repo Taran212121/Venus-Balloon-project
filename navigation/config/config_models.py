@@ -34,6 +34,8 @@ class OrbitalElements:
 @dataclass
 class OrbiterConfig:
     initial_orbit: OrbitalElements
+    min_elevation_deg: int
+    max_elevation_deg: int
 
 
 @dataclass
