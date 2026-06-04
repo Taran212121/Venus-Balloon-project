@@ -213,7 +213,7 @@ def check_constraints(row):
     for col, (op, limit, label) in CONSTRAINTS.items():
         val = row.get(col) if isinstance(row, dict) else (
               row[col] if col in row.index else None)
-        if val is None:
+        if val is None:     
             continue
         try:
             v = float(val)
