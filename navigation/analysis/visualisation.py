@@ -262,11 +262,13 @@ def plot_simulation_3d(
     plt.show()
 
 
-def plot_link_analysis(
+def plot_link_track(
     times,
     distances,
     elevation_deg,
-    link_available
+    link_available,
+    min_elevation_deg=20,
+    max_elevation_deg=80
 ):
 
     fig, axes = plt.subplots(
@@ -304,13 +306,13 @@ def plot_link_analysis(
     )
 
     axes[1].axhline(
-        20,
+        min_elevation_deg,
         color="red",
         linestyle="--"
     )
 
     axes[1].axhline(
-        80,
+        max_elevation_deg,
         color="red",
         linestyle="--"
     )
@@ -318,8 +320,8 @@ def plot_link_analysis(
     # Shade communication windows
     axes[1].fill_between(
         times_days,
-        20,
-        80,
+        min_elevation_deg,
+        max_elevation_deg,
         where=link_available,
         alpha=0.3
     )
@@ -547,3 +549,144 @@ def plot_combined_groundtrack(
 
     plt.show()
 
+
+def plot_balloon_altitude(
+    balloon_positions,
+    times,
+    planet_radius,
+    target_altitude=None,
+    tolerance=None
+):
+    altitudes = np.linalg.norm(balloon_positions, axis=1) / 1000.0
+
+    times_days = times / (24 * 3600)
+
+    fig, ax = plt.subplots(
+        figsize=(12, 5)
+    )
+
+    ax.plot(
+        times_days,
+        altitudes,
+        color="magenta",
+        linewidth=2
+    )
+
+    if target_altitude is not None:
+
+        target_km = target_altitude / 1000
+
+        ax.axhline(
+            target_km,
+            linestyle="--"
+        )
+
+        if tolerance is not None:
+
+            tol_km = tolerance / 1000
+
+            ax.fill_between(
+                times_days,
+                target_km - tol_km,
+                target_km + tol_km,
+                alpha=0.2
+            )
+
+    ax.set_xlabel(
+        "Time [Earth days]"
+    )
+
+    ax.set_ylabel(
+        "Altitude [km]"
+    )
+
+    ax.grid(True)
+
+    plt.show()
+
+
+def plot_monte_carlo_groundtrack(
+    latitudes_deg,
+    longitudes_deg,
+    mode="trajectories",   # "trajectories" or "density"
+    alpha=0.1,
+    color="magenta"
+):
+    """
+    Plot Monte Carlo balloon ground tracks.
+
+    Parameters
+    ----------
+    latitudes_deg : (n_runs, n_steps)
+    longitudes_deg : (n_runs, n_steps)
+    mode :
+        - "trajectories": overlay all runs
+        - "density": 2D histogram (recommended for many runs)
+    """
+
+    fig, ax = setup_venus_map_axes()
+
+    n_runs = latitudes_deg.shape[0]
+
+    # =========================================================
+    # MODE 1: raw trajectories (good for small N ~ < 30)
+    # =========================================================
+    if mode == "trajectories":
+
+        for i in range(n_runs):
+
+            segments = split_longitude_discontinuities(
+                longitudes_deg[i],
+                latitudes_deg[i]
+            )
+
+            for lon_seg, lat_seg in segments:
+
+                ax.plot(
+                    lon_seg,
+                    lat_seg,
+                    color=color,
+                    alpha=alpha,
+                    linewidth=1.0,
+                    label="Monte Carlo" if i == 0 else None
+                )
+
+        ax.set_title("Monte Carlo Balloon Ground Tracks")
+
+    # =========================================================
+    # MODE 2: density map (recommended for large N)
+    # =========================================================
+    elif mode == "density":
+
+        lon_all = longitudes_deg.flatten()
+        lat_all = latitudes_deg.flatten()
+
+        bins_lon = np.linspace(-180, 180, 200)
+        bins_lat = np.linspace(-90, 90, 100)
+
+        H, xedges, yedges = np.histogram2d(
+            lon_all,
+            lat_all,
+            bins=[bins_lon, bins_lat]
+        )
+
+        H = H.T  # for imshow orientation
+
+        im = ax.imshow(
+            H,
+            extent=[-180, 180, -90, 90],
+            origin="lower",
+            cmap="inferno",
+            aspect="auto"
+        )
+
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label("Visit density")
+
+        ax.set_title("Monte Carlo Ground Track Density")
+
+    else:
+        raise ValueError("mode must be 'trajectories' or 'density'")
+
+    # ax.legend()
+    plt.show()
