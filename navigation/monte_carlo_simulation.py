@@ -8,7 +8,8 @@ from environment.venus import VenusModel
 from environment.atmosphere import AtmosphereModelFullVCD
 
 from propagators.balloon_propagator import (
-    WindsAndDensityBalloonPropagator,
+    WindFollowingBalloonPropagator,
+    DensityTrackingController
 )
 
 from vehicles.balloon import BalloonState
@@ -23,12 +24,12 @@ from paths import *
 
 # %% CONFIG
 
-SCENARIO = SCENARIOS_DIR / "base_scenario.yaml"
+SCENARIO = SCENARIOS_DIR / "monte_carlo_scenario.yaml"
 
-N_MONTE_CARLO_RUNS = 20
+N_MONTE_CARLO_RUNS = 100
 
 OUTPUT_FILE = (
-    OUT_DIR / "mc_300day_20balloons.npz"
+    OUT_DIR / "gigantic_monte_carlo.npz"
 )
 
 
@@ -66,7 +67,10 @@ def run_monte_carlo(
         altitude_history
     )
 
+    lats = [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    # for run_idx, lat in zip(range(n_runs), lats):
     for run_idx in range(n_runs):
+    
 
         print(
             f"Monte Carlo run "
@@ -87,7 +91,8 @@ def run_monte_carlo(
 
             # EOF perturbations
             "perturb_key": 2,
-            "perturb_seed": run_idx + 1,
+            "perturb_seed": 2*(run_idx + 1),
+            # "perturb_seed": 6969,
 
             # Only used for GW perturbations
             "perturb_gw_length": 0.0,
@@ -104,14 +109,15 @@ def run_monte_carlo(
 
         balloon_state = BalloonState(
             latitude_deg=config.balloon.initial.latitude_deg,
+            # latitude_deg=lat,
             longitude_deg=config.balloon.initial.longitude_deg,
             altitude_m=config.balloon.initial.altitude_m
         )
 
         propagator = (
-            WindsAndDensityBalloonPropagator(
+            WindFollowingBalloonPropagator(
                 venus_model=venus,
-                envelope_density=1.2
+                vertical_controller=DensityTrackingController(envelope_density=1.0)  # [kg/m^3]
             )
         )
 
@@ -320,20 +326,26 @@ def main():
         f"{OUTPUT_FILE}"
     )
 
-    plot_altitude_envelope(
-        results["times"],
-        results["altitude"]
-    )
+    # plot_altitude_envelope(
+    #     results["times"],
+    #     results["altitude"]
+    # )
 
     plot_monte_carlo_groundtrack(
         latitudes_deg=results['latitude'],
         longitudes_deg=results['longitude'],
         mode='trajectories',
-        alpha=0.3
+        alpha=0.1
     )
 
-def recover_data():
-    RECOVER_PATH = OUT_DIR / "mc_300day_20balloons.npz"
+    plot_monte_carlo_groundtrack(
+        latitudes_deg=results['latitude'],
+        longitudes_deg=results['longitude'],
+        mode='density',
+    )
+
+def recover_data(npz_filename: str):
+    RECOVER_PATH = OUT_DIR / npz_filename
     results = np.load(RECOVER_PATH)
 
     plot_altitude_envelope(
@@ -344,13 +356,19 @@ def recover_data():
     plot_monte_carlo_groundtrack(
         latitudes_deg=results['latitude'],
         longitudes_deg=results['longitude'],
+        mode='trajectories',
+        alpha=0.1
+    )
+
+    plot_monte_carlo_groundtrack(
+        latitudes_deg=results['latitude'],
+        longitudes_deg=results['longitude'],
         mode='density',
-        alpha=0.3
     )
 
 # %% RUN
 
 if __name__ == "__main__":
     
-    # main()
-    recover_data()
+    main()
+    # recover_data("another_large_sample.npz")

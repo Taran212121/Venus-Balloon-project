@@ -10,9 +10,11 @@ from environment.atmosphere import (
 )
 
 from propagators.balloon_propagator import (
-    FollowZonalWindBalloonPropagator,
-    FollowAllWindsBalloonPropagator,
-    WindsAndDensityBalloonPropagator,
+    WindFollowingBalloonPropagator,
+    ConstantAltitudeController,
+    VerticalWindController,
+    DensityTrackingController,
+    ScriptedAltitudeController
 )
 
 from propagators.orbiter_propagator import (
@@ -30,12 +32,14 @@ from analysis.visualisation import (
     plot_balloon_altitude
 )
 
+from tools.altitude_functions import
+
 from analysis.communications import compute_link_metrics, generate_link_report
 
 from paths import *
 
 # %% CONFIG VARIABLES
-SCENARIO = SCENARIOS_DIR / "base_scenario.yaml"
+SCENARIO = SCENARIOS_DIR / "single_scenario.yaml"
 
 ATMOSPHERE_FILE = (
     DATA_DIR / "venus_atmosphere.parquet"
@@ -52,15 +56,15 @@ VISUALIZATIONS = {
     "simulation_3d": True,
 
     # Ground tracks
-    "groundtrack_balloon": False,
+    "groundtrack_balloon": True,
     "groundtrack_orbiter": False,
-    "groundtrack_combined": True,
+    "groundtrack_combined": False,
 
     # Balloon tracking
     "balloon_altitude": True,
 
     # Communications
-    "link_plot": True,
+    "link_plot": False,
     "link_analysis": False,
 }
 
@@ -107,9 +111,9 @@ def main():
 
     # Propagators
     balloon_propagator = (
-        WindsAndDensityBalloonPropagator(
+        WindFollowingBalloonPropagator(
             venus_model=venus,
-            envelope_density=0.95  # [kg/m^3]
+            vertical_controller=DensityTrackingController(envelope_density=0.95)  # [kg/m^3]
         )
     )
 
