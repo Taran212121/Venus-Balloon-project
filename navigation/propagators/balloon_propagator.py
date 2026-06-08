@@ -50,20 +50,33 @@ class WindFollowingBalloonPropagator(BalloonPropagator):
         )
 
         latitude_rad = np.radians(state.latitude_deg)
-        local_radius = (self.planet_radius + state.altitude_m) * np.cos(latitude_rad)
+        cosine_lat = np.cos(latitude_rad)
+        radius = self.planet_radius + state.altitude_m
+        local_radius = radius * cosine_lat
 
         # Latitude
-        latitude_rate = meridional_velocity / local_radius
+        latitude_rate = meridional_velocity / radius
         delta_latitude_deg = np.degrees(latitude_rate * dt)
         latitude_next = state.latitude_deg + delta_latitude_deg
 
-        latitude_next = np.clip(latitude_next, -90, 90)
-
         # Longitude
-        longitude_rate = zonal_velocity / local_radius # [rad/s]
+        if abs(cosine_lat) < 1e-6:
+            longitude_rate = 0.0
+        else:
+            longitude_rate = zonal_velocity / local_radius # [rad/s]
         delta_longitude_deg = np.degrees(longitude_rate * dt)
         longitude_next = state.longitude_deg + delta_longitude_deg
 
+        # Pole crossing
+        while latitude_next > 90:
+            latitude_next = 180 - latitude_next
+            longitude_next += 180
+
+        while latitude_next < -90:
+            latitude_next = -180 - latitude_next
+            longitude_next += 180
+
+        # Longitude wrapping
         longitude_next = ((longitude_next + 180.0) % 360.0) - 180.0
 
         # Altitude
