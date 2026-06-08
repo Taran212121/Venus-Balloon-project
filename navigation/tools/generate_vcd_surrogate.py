@@ -106,7 +106,146 @@ def main():
 
     print("Saved!")
 
+def simplified_power_grid():
+     
+     # Grid
+    lat_grid = np.array(
+        [0, 15, 30, 45, 60, 75, 90],
+        dtype=np.float32
+    )
+
+    z_grid = np.arange(
+        40,
+        71,
+        1,
+        dtype=np.float32
+    )
+
+    localtime_grid = np.arange(
+        0.0,
+        24.0,
+        0.25,   # 15 venus-minute resolution
+        dtype=np.float32
+    )
+
+    N_lat = len(lat_grid)
+    N_z = len(z_grid)
+
+    # Output
+    sw_flux = np.zeros(
+        (N_lat, N_z),
+        dtype=np.float32
+    )
+
+    # Fixed inputs
+    z_key = 2
+
+    date_key = 1
+    juliandate = 0.0
+
+    dset = (r"C:\Users\juliu\OneDrive - Delft University of Technology\Bureaublad\BSc AE Y3\DESIGN SYNTHESIS EXERCISE\VCD2.3\VCD_DATA\\")
+
+    EUV_scena = 1
+    albedo_scena = 1
+    varE107 = 0.0
+
+    perturb_key = 0
+    perturb_seed = 0
+    perturb_gw_length = 0.0
+
+    extvar_keys = np.zeros(100, dtype=np.int32)
+    extvar_keys[40] = 1  # Request SW flux
+
+    # Sampling loop
+    for i, lat in enumerate(lat_grid):
+
+        print(
+            f"Computing latitude {lat:.0f} deg"
+        )
+
+        for k, z in enumerate(z_grid):
+
+            flux_samples = []
+
+            for localtime in localtime_grid:
+
+                (
+                    zon_wind,
+                    mer_wind,
+                    vert_wind,
+                    temp,
+                    pres,
+                    dens,
+                    extvar,
+                    seed_out,
+                    ier
+                ) = sample_vcd(
+                    z_key,
+                    float(z * 1000.0),
+                    0.0,                   # longitude
+                    float(lat),
+                    0,                     # hires
+                    date_key,
+                    juliandate,
+                    float(localtime),
+                    dset,
+                    EUV_scena,
+                    albedo_scena,
+                    varE107,
+                    perturb_key,
+                    perturb_seed,
+                    perturb_gw_length,
+                    extvar_keys
+                )
+
+                if ier != 0:
+                    raise RuntimeError(
+                        f"VCD failed at "
+                        f"lat={lat}, "
+                        f"z={z}, "
+                        f"lt={localtime}, "
+                        f"ier={ier}"
+                    )
+
+                flux_samples.append(
+                    extvar[40]
+                )
+
+            sw_flux[i, k] = np.mean(
+                flux_samples
+            )
+
+            if i == 0 and k == 0:
+
+                print("DEBUG SAMPLE")
+                print(
+                    "Mean SW flux:",
+                    sw_flux[i, k]
+                )
+
+    # Diagnostics
+    print()
+    print("========== Sanity checks ==========")
+
+    print("Shape:", sw_flux.shape)
+    print("Min:", np.min(sw_flux))
+    print("Max:", np.max(sw_flux))
+    print("Mean:", np.mean(sw_flux))
+    print("NaNs:", np.isnan(sw_flux).any())
+    print("Infs:", np.isinf(sw_flux).any())
+
+    # Saving
+    np.savez_compressed(
+        DATA_DIR / "vcd_mean_shortwave_flux.npz",
+        lat=lat_grid,
+        z=z_grid,
+        sw_flux=sw_flux
+    )
+
+    print()
+    print("Saved!")
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    simplified_power_grid()
