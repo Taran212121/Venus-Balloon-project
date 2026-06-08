@@ -1,6 +1,7 @@
 # %% IMPORTS
 
 import numpy as np
+import random as r
 
 from config.config_loader import load_config
 
@@ -17,7 +18,10 @@ from vehicles.balloon import BalloonState
 from analysis.visualisation import (
     plot_balloon_altitude,
     plot_monte_carlo_groundtrack,
+    generate_heatmap_snapshots
 )
+
+from analysis.trajectory_analysis import check_vortex_captures
 
 from paths import *
 
@@ -26,10 +30,10 @@ from paths import *
 
 SCENARIO = SCENARIOS_DIR / "monte_carlo_scenario.yaml"
 
-N_MONTE_CARLO_RUNS = 10
+N_MONTE_CARLO_RUNS = 100
 
 OUTPUT_FILE = (
-    OUT_DIR / "tiny_monte_carlo.npz"
+    OUT_DIR / "100b_300d_latitudes_2.npz"
 )
 
 
@@ -71,6 +75,7 @@ def run_monte_carlo(
     # for run_idx, lat in zip(range(n_runs), lats):
     for run_idx in range(n_runs):
     
+        lat = r.choice(lats)
 
         print(
             f"Monte Carlo run "
@@ -91,7 +96,7 @@ def run_monte_carlo(
 
             # EOF perturbations
             "perturb_key": 2,
-            "perturb_seed": 2*(run_idx + 1),
+            "perturb_seed": run_idx + 700,
             # "perturb_seed": 6969,
 
             # Only used for GW perturbations
@@ -108,8 +113,8 @@ def run_monte_carlo(
         # ----------------------------------
 
         balloon_state = BalloonState(
-            latitude_deg=config.balloon.initial.latitude_deg,
-            # latitude_deg=lat,
+            # latitude_deg=config.balloon.initial.latitude_deg,
+            latitude_deg=lat,
             longitude_deg=config.balloon.initial.longitude_deg,
             altitude_m=config.balloon.initial.altitude_m
         )
@@ -231,10 +236,7 @@ def analyze_campaign(results):
 
 # %% VISUALIZATION
 
-def plot_altitude_envelope(
-    times,
-    altitude_history
-):
+def plot_altitude_envelope(times, altitude_history):
 
     import matplotlib.pyplot as plt
 
@@ -344,31 +346,46 @@ def main():
         mode='density',
     )
 
-def recover_data(npz_filename: str):
+def recover_data(npz_filename: str, only_vortex: bool = False):
     RECOVER_PATH = OUT_DIR / npz_filename
     results = np.load(RECOVER_PATH)
 
-    plot_altitude_envelope(
-        results["times"],
-        results["altitude"]
+    if only_vortex:
+        results = check_vortex_captures(results, threshold_deg=70, time_fraction=0.0)
+
+    # plot_altitude_envelope(
+    #     results["times"],
+    #     results["altitude"]
+    # )
+
+    # plot_monte_carlo_groundtrack(
+    #     latitudes_deg=results['latitude'],
+    #     longitudes_deg=results['longitude'],
+    #     mode='trajectories',
+    #     alpha=0.1
+    # )
+
+    # plot_monte_carlo_groundtrack(
+    #     latitudes_deg=results['latitude'],
+    #     longitudes_deg=results['longitude'],
+    #     mode='density',
+    # )
+
+    generate_heatmap_snapshots(
+        times=results['times'],
+        latitude=results['latitude'],
+        longitude=results['longitude'],
+        mode = "cumulative",
+        days_per_frame=5,
     )
 
-    plot_monte_carlo_groundtrack(
-        latitudes_deg=results['latitude'],
-        longitudes_deg=results['longitude'],
-        mode='trajectories',
-        alpha=0.1
-    )
+    
 
-    plot_monte_carlo_groundtrack(
-        latitudes_deg=results['latitude'],
-        longitudes_deg=results['longitude'],
-        mode='density',
-    )
+
 
 # %% RUN
 
 if __name__ == "__main__":
     
-    main()
-    # recover_data("another_large_sample.npz")
+    # main()
+    recover_data("100b_300d_latitudes_1.npz", only_vortex=False)

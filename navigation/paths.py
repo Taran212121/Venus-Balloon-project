@@ -14,10 +14,12 @@ TOOLS_DIR = ROOT / "tools"
 DATA_DIR = ROOT / "data"
 SCENARIOS_DIR = ROOT / "scenarios"
 OUT_DIR = ROOT / "out"
+FRAME_DIR = OUT_DIR / "frames"
 
 DATA_DIR.mkdir(exist_ok=True)
 SCENARIOS_DIR.mkdir(exist_ok=True)
 OUT_DIR.mkdir(exist_ok=True)
+FRAME_DIR.mkdir(exist_ok=True)
 
 
 if __name__ == "__main__":

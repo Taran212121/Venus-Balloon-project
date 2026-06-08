@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
 
-from paths import DATA_DIR
+from paths import DATA_DIR, FRAME_DIR
 
 VENUS_MAP = DATA_DIR / "Cylindrical_Map_of_Venus.jpg"
 
@@ -690,3 +690,84 @@ def plot_monte_carlo_groundtrack(
 
     # ax.legend()
     plt.show()
+
+
+def generate_heatmap_snapshots(
+    times,
+    latitude,
+    longitude,
+    days_per_frame=5,
+    mode="instant",  # "instant" or "cumulative"
+    cmap="inferno"
+):
+
+    dt = np.mean(np.diff(times))
+    print(f"dt: {dt}")
+    frame_stride = int(days_per_frame* 86400 / dt)
+    frame_indices = np.arange(0, len(times), frame_stride)
+
+    print(f"Generating {len(frame_indices)} frames...")
+
+    for frame_number, idx in enumerate(frame_indices):
+        print(f"{frame_number}...")
+        
+        if mode == "instant":
+            lat = latitude[:, idx]
+            lon = longitude[:, idx]
+        elif mode == "cumulative":
+            lat = latitude[:, :idx].flatten()
+            lon = longitude[:, :idx].flatten()
+        else:
+            raise ValueError(f"Invalid mode for heatmap frame generation")
+
+        bins_lon = np.linspace(-180, 180, 200)
+        bins_lat = np.linspace(-90, 90, 100)
+
+        heatmap, lat_edges, lon_edges = (
+            np.histogram2d(
+                lon,
+                lat,
+                bins=(bins_lon, bins_lat),
+            )
+        )
+
+        fig, ax = plt.subplots(
+            figsize=(12, 6)
+        )
+        if mode == "instant":
+            im = ax.imshow(
+                heatmap.T,
+                origin="lower",
+                extent=[-180, 180, -90, 90],
+                aspect="auto",
+                cmap=cmap,
+                vmin=0,
+                vmax=4,
+            )
+        elif mode == "cumulative":
+            im = ax.imshow(
+                heatmap.T,
+                origin="lower",
+                extent=[-180, 180, -90, 90],
+                aspect="auto",
+                cmap=cmap
+            )
+
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label("Number of balloons")
+        day = (times[idx] / 86400)
+
+        ax.set_title(f"Balloon Distribution (Day {day:.1f})")
+        ax.set_xlabel("Longitude [deg]")
+        ax.set_ylabel("Latitude [deg]")
+
+
+        fig.tight_layout()
+
+        frame_path = FRAME_DIR / f"frame_{frame_number:04d}.png"
+        fig.savefig(frame_path, dpi=200)
+        plt.close(fig)
+
+    print(f"Frames saved to:\n {FRAME_DIR}")
+
+# ffmpeg -framerate 5 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p heatmap.mp4

@@ -73,8 +73,8 @@ vcd_config = {
     'hires_key': 0,
     'EUV_scena': 1,
     'albedo_scena': 1,
-    'perturb_key': 2,
-    'perturb_seed': 42
+    'perturb_key': 3,
+    'perturb_seed': 67
 }
 vcd_config['perturb_gw_length'] = 10000.0 if vcd_config['perturb_key'] in (1, 3) else 0 
 
@@ -113,8 +113,8 @@ def main():
     balloon_propagator = (
         WindFollowingBalloonPropagator(
             venus_model=venus,
-            vertical_controller=ScriptedAltitudeController(altitude_function=test_trajectory, max_vertical_velocity=1.0),
-            # vertical_controller=DensityTrackingController(1.1),
+            # vertical_controller=ScriptedAltitudeController(altitude_function=test_trajectory, max_vertical_velocity=1.0),
+            vertical_controller=DensityTrackingController(1.1),
         )
     )
 
