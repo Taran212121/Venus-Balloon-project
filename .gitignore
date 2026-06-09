@@ -120,3 +120,5 @@ config_local.yaml
 *.local.json
 *.local.yaml
 
+# ay ay Nina
+ninas_bullshit/
