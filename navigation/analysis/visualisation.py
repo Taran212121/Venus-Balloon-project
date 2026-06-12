@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
 
-from paths import DATA_DIR, FRAME_DIR
+from paths import DATA_DIR, FRAME_DIR, OUT_DIR
 
 VENUS_MAP = DATA_DIR / "Cylindrical_Map_of_Venus.jpg"
 
 def setup_venus_map_axes(
-    figsize=(14, 7)
+    figsize=(14, 7),
+    alpha=0.5,
 ):
     """
     Create a Venus map plot with cylindrical texture.
@@ -24,7 +25,7 @@ def setup_venus_map_axes(
         extent=(-180.0, 180.0, -90.0, 90.0),
         aspect="auto",
         origin="upper",
-        alpha=0.5
+        alpha=alpha
     )
 
     ax.set_xlim(-180, 180)
@@ -462,6 +463,8 @@ def plot_groundtrack(
         latitudes_deg
     )
 
+    ax.set_title(f"{label} Ground Track")
+
     for lon_seg, lat_seg in segments:
 
         ax.plot(
@@ -475,11 +478,6 @@ def plot_groundtrack(
         label = None
 
     ax.legend()
-
-    ax.set_title(
-        f"{label} Ground Track"
-    )
-
     plt.show()
 
 
@@ -610,7 +608,8 @@ def plot_monte_carlo_groundtrack(
     longitudes_deg,
     mode="trajectories",   # "trajectories" or "density"
     alpha=0.1,
-    color="magenta"
+    color="magenta",
+    savefig=False,
 ):
     """
     Plot Monte Carlo balloon ground tracks.
@@ -624,7 +623,7 @@ def plot_monte_carlo_groundtrack(
         - "density": 2D histogram (recommended for many runs)
     """
 
-    fig, ax = setup_venus_map_axes()
+    fig, ax = setup_venus_map_axes(figsize=(14, 6), alpha=1)
 
     n_runs = latitudes_deg.shape[0]
 
@@ -651,7 +650,8 @@ def plot_monte_carlo_groundtrack(
                     label="Monte Carlo" if i == 0 else None
                 )
 
-        ax.set_title("Monte Carlo Balloon Ground Tracks")
+        figname = "mc_vortex_gt_trajectory.png"
+        # ax.set_title("Monte Carlo Balloon Ground Tracks")
 
     # =========================================================
     # MODE 2: density map (recommended for large N)
@@ -677,18 +677,22 @@ def plot_monte_carlo_groundtrack(
             extent=[-180, 180, -90, 90],
             origin="lower",
             cmap="inferno",
-            aspect="auto"
+            aspect="auto",
+            alpha=0.85
         )
 
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label("Visit density")
 
-        ax.set_title("Monte Carlo Ground Track Density")
+        figname = "mc_gt_density.svg"
+        # ax.set_title("Monte Carlo Ground Track Density")
 
     else:
         raise ValueError("mode must be 'trajectories' or 'density'")
 
     # ax.legend()
+    plt.tight_layout()
+    if savefig: plt.savefig(OUT_DIR / figname)
     plt.show()
 
 
@@ -698,18 +702,24 @@ def generate_heatmap_snapshots(
     longitude,
     days_per_frame=5,
     mode="instant",  # "instant" or "cumulative"
-    cmap="inferno"
+    cmap="inferno",
+    n_frames=np.inf,
 ):
 
     dt = np.mean(np.diff(times))
     print(f"dt: {dt}")
     frame_stride = int(days_per_frame* 86400 / dt)
     frame_indices = np.arange(0, len(times), frame_stride)
+    
+    if len(frame_indices) > n_frames:
+        frame_indices = frame_indices[:n_frames]
 
     print(f"Generating {len(frame_indices)} frames...")
 
     for frame_number, idx in enumerate(frame_indices):
         print(f"{frame_number}...")
+        if frame_number == 0:
+            continue
         
         if mode == "instant":
             lat = latitude[:, idx]
@@ -754,7 +764,7 @@ def generate_heatmap_snapshots(
             )
 
         cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label("Number of balloons")
+        cbar.set_label("Number of balloons" if mode == "instant" else "Visit number")
         day = (times[idx] / 86400)
 
         ax.set_title(f"Balloon Distribution (Day {day:.1f})")
@@ -771,3 +781,114 @@ def generate_heatmap_snapshots(
     print(f"Frames saved to:\n {FRAME_DIR}")
 
 # ffmpeg -framerate 5 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p heatmap.mp4
+
+def plot_monte_carlo_density_comparison(
+    datasets,
+    labels,
+    savefig=False
+):
+    if len(datasets) != 4:
+        raise ValueError("Expected exactly 4 datasets")
+
+    # -------------------------------------------------
+    # Common histogram settings
+    # -------------------------------------------------
+
+    bins_lon = np.linspace(-180, 180, 200)
+    bins_lat = np.linspace(-90, 90, 100)
+
+    histograms = []
+
+    global_max = 0
+
+    # -------------------------------------------------
+    # Compute all histograms first
+    # -------------------------------------------------
+
+    for latitudes_deg, longitudes_deg in datasets:
+
+        lon_all = longitudes_deg.flatten()
+        lat_all = latitudes_deg.flatten()
+
+        H, _, _ = np.histogram2d(
+            lon_all,
+            lat_all,
+            bins=[bins_lon, bins_lat]
+        )
+
+        H = H.T
+
+        histograms.append(H)
+
+        global_max = max(
+            global_max,
+            np.max(H)
+        )
+
+    # -------------------------------------------------
+    # Plot
+    # -------------------------------------------------
+
+    fig, axes = plt.subplots(
+        2,
+        2,
+        figsize=(14, 8),
+        sharex=True,
+        sharey=True
+    )
+
+    axes = axes.flatten()
+    venus_img = plt.imread(DATA_DIR / "Cylindrical_Map_of_Venus.jpg")
+    im = None
+
+    for ax, H, label in zip(
+        axes,
+        histograms,
+        labels
+    ):
+
+        # Venus background
+
+
+
+        ax.imshow(
+            venus_img,
+            extent=[-180, 180, -90, 90],
+            aspect="auto",
+            alpha=1.0
+        )
+
+        im = ax.imshow(
+            H,
+            extent=[-180, 180, -90, 90],
+            origin="lower",
+            cmap="inferno",
+            aspect="auto",
+            alpha=0.85,
+            vmin=0,
+            vmax=global_max
+        )
+
+        ax.set_title(label)
+
+        ax.set_xlim(-180, 180)
+        ax.set_ylim(-90, 90)
+
+
+    axes[2].set_xlabel("Longitude [deg]")
+    axes[3].set_xlabel("Longitude [deg]")
+    axes[0].set_ylabel("Latitude [deg]")
+    axes[2].set_ylabel("Latitude [deg]")
+
+    cbar = fig.colorbar(
+        im,
+        ax=axes,
+        shrink=0.85,
+        pad=0.02
+    )
+
+    cbar.set_label("Visit density")
+
+    # plt.tight_layout()
+    if savefig: plt.savefig(OUT_DIR / "mc_density_comparison.png", dpi=200, bbox_inches="tight")
+    plt.show()

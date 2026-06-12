@@ -56,15 +56,15 @@ VISUALIZATIONS = {
     "simulation_3d": True,
 
     # Ground tracks
-    "groundtrack_balloon": True,
+    "groundtrack_balloon": False,
     "groundtrack_orbiter": False,
-    "groundtrack_combined": False,
+    "groundtrack_combined": True,
 
     # Balloon tracking
-    "balloon_altitude": True,
+    "balloon_altitude": False,
 
     # Communications
-    "link_plot": False,
+    "link_plot": True,
     "link_analysis": False,
 }
 
@@ -114,7 +114,7 @@ def main():
         WindFollowingBalloonPropagator(
             venus_model=venus,
             # vertical_controller=ScriptedAltitudeController(altitude_function=test_trajectory, max_vertical_velocity=1.0),
-            vertical_controller=DensityTrackingController(1.1),
+            vertical_controller=DensityTrackingController(0.9),
         )
     )
 

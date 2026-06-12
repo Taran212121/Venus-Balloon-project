@@ -1,5 +1,5 @@
 scenario:
-  name: "density_control_test"
+  name: "altitude_sweep_test"
 
 planet:
   body: venus
@@ -13,7 +13,7 @@ balloon:
   initial:
     latitude_deg: 0.0
     longitude_deg: 0.0
-    altitude_m: 52000.0
+    altitude_m: 54000.0
 
 orbiter:
   initial_orbit:

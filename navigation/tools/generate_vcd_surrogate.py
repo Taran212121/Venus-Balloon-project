@@ -3,7 +3,7 @@ import numpy as np
 
 
 from tools.vcd_wrapper import get_julian_date, sample_vcd
-from paths import DATA_DIR
+from paths import DATA_DIR, OUT_DIR
 
 
 def main():
@@ -246,6 +246,74 @@ def simplified_power_grid():
     print("Saved!")
 
 
+def sulfuric_acid_data():
+    # Fixed inputs
+    z_key = 2
+    
+    lon = 0.0
+    lat = 0.0
+    hires_key = 0
+    date_key = 1
+    juliandate = 0.0
+    localtime = 12.0
+    dset = (r"C:\Users\juliu\OneDrive - Delft University of Technology\Bureaublad\BSc AE Y3\DESIGN SYNTHESIS EXERCISE\VCD2.3\VCD_DATA\\")
+    EUV_scena = 1
+    albedo_scena = 1
+    varE107 = 0.0
+    perturb_key = 0
+    perturb_seed = 0
+    perturb_gw_length = 0.0
+
+    extvar_keys = np.zeros(100, dtype=np.int32)
+    idx = 56  # Request H2SO4 volume mixing ratio [mol/mol of air] 
+    extvar_keys[idx] = 1
+    extvar_keys = np.ones_like(extvar_keys)
+
+    z_grid = np.arange(40, 71, 1, dtype=np.float64)
+    acid_grid = np.zeros_like(z_grid, dtype=np.float64)
+
+    for i, z in enumerate(z_grid):
+        (
+            zon_wind,
+            mer_wind,
+            vert_wind,
+            temp,
+            pres,
+            dens,
+            extvar,
+            seed_out,
+            ier
+        ) = sample_vcd(
+            z_key,
+            float(z * 1000.0),
+            lon,
+            lat,
+            hires_key,
+            date_key,
+            juliandate,
+            localtime,
+            dset,
+            EUV_scena,
+            albedo_scena,
+            varE107,
+            perturb_key,
+            perturb_seed,
+            perturb_gw_length,
+            extvar_keys
+        )
+
+        acid_grid[i] = extvar[idx]
+        print(extvar)
+
+    out = np.column_stack((z_grid, acid_grid))
+    print(out)
+    print(out[9, 1])
+    np.save(DATA_DIR / "sulfuric_acid_data.npy", out)
+
+
+
+
 if __name__ == "__main__":
     # main()
-    simplified_power_grid()
+    # simplified_power_grid()
+    sulfuric_acid_data()

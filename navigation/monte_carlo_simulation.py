@@ -10,15 +10,22 @@ from environment.atmosphere import AtmosphereModelFullVCD
 
 from propagators.balloon_propagator import (
     WindFollowingBalloonPropagator,
-    DensityTrackingController
+    DensityTrackingController,
+    ConstantAltitudeController,
+    ScriptedAltitudeController
 )
 
 from vehicles.balloon import BalloonState
 
+from tools.trajectory_functions import (
+    periodic_oscillation
+)
+
 from analysis.visualisation import (
     plot_balloon_altitude,
     plot_monte_carlo_groundtrack,
-    generate_heatmap_snapshots
+    generate_heatmap_snapshots,
+    plot_monte_carlo_density_comparison
 )
 
 from analysis.trajectory_analysis import check_vortex_captures
@@ -30,11 +37,13 @@ from paths import *
 
 SCENARIO = SCENARIOS_DIR / "monte_carlo_scenario.yaml"
 
-N_MONTE_CARLO_RUNS = 100
+N_MONTE_CARLO_RUNS = 50
 
 OUTPUT_FILE = (
-    OUT_DIR / "100b_300d_latitudes_2.npz"
+    OUT_DIR / "50b_300d_55km.npz"
 )
+
+r.seed(80)
 
 
 # %% MONTE CARLO
@@ -74,7 +83,7 @@ def run_monte_carlo(
     lats = [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
     # for run_idx, lat in zip(range(n_runs), lats):
     for run_idx in range(n_runs):
-    
+        
         lat = r.choice(lats)
 
         print(
@@ -96,7 +105,7 @@ def run_monte_carlo(
 
             # EOF perturbations
             "perturb_key": 2,
-            "perturb_seed": run_idx + 700,
+            "perturb_seed": run_idx * 100,
             # "perturb_seed": 6969,
 
             # Only used for GW perturbations
@@ -122,7 +131,13 @@ def run_monte_carlo(
         propagator = (
             WindFollowingBalloonPropagator(
                 venus_model=venus,
-                vertical_controller=DensityTrackingController(envelope_density=1.0)  # [kg/m^3]
+                # vertical_controller=DensityTrackingController(envelope_density=0.92)  # [kg/m^3]
+                vertical_controller=ConstantAltitudeController(),
+                # vertical_controller=ScriptedAltitudeController(
+                #     altitude_function=periodic_oscillation,
+                #     max_vertical_velocity=0.5,
+                #     gain=0.1,
+                # )
             )
         )
 
@@ -133,6 +148,9 @@ def run_monte_carlo(
         t = 0.0
 
         for step in range(n_steps):
+
+            if step % 600 == 0:  # Try simulating changing waves
+                atmosphere.perturb_seed += 1
 
             altitude_history[
                 run_idx,
@@ -346,7 +364,7 @@ def main():
         mode='density',
     )
 
-def recover_data(npz_filename: str, only_vortex: bool = False):
+def recover_data(npz_filename: str, only_vortex: bool = False, savefig: bool = False):
     RECOVER_PATH = OUT_DIR / npz_filename
     results = np.load(RECOVER_PATH)
 
@@ -362,23 +380,48 @@ def recover_data(npz_filename: str, only_vortex: bool = False):
     #     latitudes_deg=results['latitude'],
     #     longitudes_deg=results['longitude'],
     #     mode='trajectories',
-    #     alpha=0.1
+    #     alpha=0.03,
+    #     savefig=savefig,
     # )
 
-    # plot_monte_carlo_groundtrack(
-    #     latitudes_deg=results['latitude'],
-    #     longitudes_deg=results['longitude'],
-    #     mode='density',
-    # )
-
-    generate_heatmap_snapshots(
-        times=results['times'],
-        latitude=results['latitude'],
-        longitude=results['longitude'],
-        mode = "cumulative",
-        days_per_frame=5,
+    plot_monte_carlo_groundtrack(
+        latitudes_deg=results['latitude'],
+        longitudes_deg=results['longitude'],
+        mode='density',
+        savefig=savefig,
     )
 
+    # generate_heatmap_snapshots(
+    #     times=results['times'],
+    #     latitude=results['latitude'],
+    #     longitude=results['longitude'],
+    #     mode="cumulative",
+    #     days_per_frame=1,
+    #     n_frames=60,
+    # )
+
+
+def monte_carlo_comparison(savefig:bool):
+    results_54 = np.load(OUT_DIR / "50b_300d_54km.npz")
+    results_55 = np.load(OUT_DIR / "50b_300d_55km.npz")
+    results_56 = np.load(OUT_DIR / "50b_300d_56km.npz")
+    results_57 = np.load(OUT_DIR / "50b_300d_57km.npz")
+
+    plot_monte_carlo_density_comparison(
+        datasets=[
+            (results_54["latitude"], results_54["longitude"]),
+            (results_55["latitude"], results_55["longitude"]),
+            (results_56["latitude"], results_56["longitude"]),
+            (results_57["latitude"], results_57["longitude"])
+        ],
+        labels=[
+            "54 km",
+            "55 km",
+            "56 km",
+            "57 km"
+        ],
+        savefig=savefig
+    )
     
 
 
@@ -388,4 +431,5 @@ def recover_data(npz_filename: str, only_vortex: bool = False):
 if __name__ == "__main__":
     
     # main()
-    recover_data("100b_300d_latitudes_1.npz", only_vortex=False)
+    # recover_data("300b_300d_combined.npz", only_vortex=False, savefig=True)
+    monte_carlo_comparison(savefig=True)
