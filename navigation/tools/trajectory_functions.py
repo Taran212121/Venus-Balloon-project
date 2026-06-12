@@ -1,8 +1,9 @@
 import numpy as np
+from numpy.typing import NDArray
 from typing import Callable
 
 
-TrajectoryFunction = Callable[[float], float]
+TrajectoryFunction = Callable[[float | NDArray], float | NDArray]
 
 
 # ==============================
@@ -95,6 +96,18 @@ def sawtooth(amplitude: float, period: float) -> TrajectoryFunction:
     return func
 
 
+def square_wave(amplitude: float, period: float) -> TrajectoryFunction:
+
+    def func(t: float) -> float:
+        phase = (t % period) / period
+        if 0.0 < phase <= 0.5:
+            return amplitude
+        else:
+            return -amplitude
+        
+    return func
+
+
 def gaussian(center_time: float, width: float, amplitude: float) -> TrajectoryFunction:
 
     def func(t: float) -> float:
@@ -114,6 +127,25 @@ def linear_transition(start_time: float, end_time: float, start_value: float, en
             alpha = (t - start_time) / (end_time - start_time)
             return start_value + alpha * (end_value - start_value)
     
+    return func
+
+
+def linear_spline(points: list[tuple[float, float]]) -> TrajectoryFunction:
+
+    points = sorted(points, key=lambda p: p[0])
+
+    times = np.array([p[0] for p in points])
+    values = np.array([p[1] for p in points])
+
+    def func(t: NDArray) ->  NDArray:
+        return np.interp(
+            t,
+            times,
+            values,
+            left=values[0],
+            right=values[-1]
+        )
+
     return func
 
 
@@ -174,7 +206,15 @@ test_trajectory = add(
     )
 )
 
-
-
 # test_trajectory = constant(52_000)
 test_trajectory = linear_transition(1 * 24 * 3600, 8 * 24 * 3600, 52_000, 56_000)
+
+
+periodic_oscillation = add(
+    constant(55_000),
+    square_wave(
+        amplitude=2_000,
+        period=5 * 24 * 3600,
+    )
+)
+
