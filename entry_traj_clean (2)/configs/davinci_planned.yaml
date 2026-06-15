@@ -1,0 +1,63 @@
+architecture:
+  tuple_id: "DAVINCI-planned-entry"
+  workbook_id: "DAVINCI SciTech/NTRS comparison"
+
+entry:
+  interface_altitude_m: 145000.0
+  velocity_m_s: 10400.0
+  fpa_deg: -6.3
+  # Approximate mass from PV-class beta with the published 2.24 m entry system.
+  # Use as a quick validation proxy unless a published entry mass is supplied.
+  m_entry_kg: 787.0
+
+vehicle:
+  cd: 1.05
+  cd_mach_table: null
+  diameter_m: 2.24
+  reference_area_m2: null
+  nose_radius_m: 0.56
+
+atmosphere:
+  model: profile
+  density:
+    kind: profile_file
+    profile_path: "atmosphere"
+    profile_format: "vcd_vira"
+    profile_selector: "lat0_sza15"
+
+handoff:
+  altitude_m: 70000.0
+
+events:
+  drogue_deploy_alt_m: 70000.0
+  main_deploy_alt_m: null
+
+dispersions:
+  n_runs: 1000
+  seed: 1001
+  mass_fraction: 0.10
+  fpa_deg: 2.0
+
+numerics:
+  time_step_s: 0.25
+  max_time_s: 1800.0
+  max_altitude_m: 250000.0
+  include_gravity: true
+  trajectory_model: spherical_ballistic
+
+validation:
+  peak_g_cap_g: 200.0
+  peak_heat_cap_w_m2: 20000000.0
+  allen_eggers_tolerance_fraction: 0.08
+
+persistence:
+  workbook_path: "results/davinci/workbook_v1.xlsx"
+  latex_macros_path: "results/davinci/macros.tex"
+  require_existing_workbook: false
+
+source_ids:
+  peak_g: "DAVINCI-NTRS-20220017581"
+  peak_q: "DAVINCI-NTRS-20220017581-model-only"
+  peak_heat: "DAVINCI-NTRS-20220017581"
+  heat_load: "DAVINCI-NTRS-20220017581-model-only"
+  mach_handoff: "DAVINCI-NTRS-20220017581"

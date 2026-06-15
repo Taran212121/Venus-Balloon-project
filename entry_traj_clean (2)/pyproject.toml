@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "entry-traj"
+version = "0.2.0"
+description = "Phase-0 Venus entry trajectory analysis: 1D ballistic integrator, dispersed ensembles, hand-off corridor"
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6.0",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+full = [
+    "openpyxl>=3.1",   # workbook export
+    "h5py>=3.8",       # Venus-GRAM HDF5 dispersions
+    "chaospy>=4.3",    # Latin-hypercube sampling (falls back to stdlib LHS)
+    "streamlit>=1.35", # GUI
+]
+test = ["pytest>=7.4"]
+
+[tool.setuptools.packages.find]
+include = ["entry_traj*"]

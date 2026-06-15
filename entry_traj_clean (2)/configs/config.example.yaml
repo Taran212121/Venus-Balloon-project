@@ -1,0 +1,309 @@
+architecture:
+  tuple_id: "T2/A1/Mt3/S2/M2/epsilon-1"
+  workbook_id: "EDDI_parametric_mass_sizing_tool_v4_FINAL (1).xlsx"
+
+mass_basis:
+  source_workbook: "EDDI_parametric_mass_sizing_tool_v4_FINAL (1).xlsx"
+  entry_mass_without_system_margin_kg: 689.130
+  entry_mass_with_system_margin_kg: 755.653
+  note: "EDDI audit basis: trajectory uses the without-system-margin mass; with-system-margin mass is carried as a closure check."
+
+entry:
+  interface_altitude_m: 140000.0
+  velocity_m_s: 11000.0          # MTR interface state
+  fpa_deg: -8.0                  # COMMITTED AIM, locked 5 Jun (FA1, R-GNC-EFPA-01: -8.0 +/- 0.5 3-sigma).
+                                 # Sits inside the mass-optimal band (-7 to -12 deg: x6.48 N2-amplified
+                                 # g-structure vs un-amplified TPS trade). Off-aim cases like -8.3 are
+                                 # covered by the MC corridor, not by moving the aim.
+  m_entry_kg: 689.130            # EDDI v4 final audit basis, without system margin
+                                 # System-margined closure mass: 755.653 kg; cap remains 700 kg
+
+vehicle:
+  cd: 1.0                        # CHANGED 1.4 → 1.0 (45° sphere-cone, PV heritage)
+                                 # NOTE: "MTR β=232 only closes at Cd≈1.0" is now stale —
+                                 # β moved with the mass re-baseline; Cd=1.0 stands on heritage alone
+  cd_mach_table: null            # upgrade path: Mach-varying Cd (Cd drops transonic at deploy); null = constant-Cd Phase-0
+  reference_area_m2: 2.72         # aerodynamic projected reference area, not TPS wetted forebody area
+  nose_radius_m: 0.93             # stagnation radius used by Sutton-Graves heating correlation
+  forebody_wetted_area_m2: 3.6    # EDDI v4 TPS input A_fore
+  backshell_wetted_area_m2: 3.4   # EDDI v4 TPS input A_back
+  # derived: beta = m/(Cd*A) = 689.130 / (1.0 * 2.72) = 253.4 kg/m^2
+  # note: A_fore=3.6 m^2 and A_back=3.4 m^2 are TPS wetted areas; do not substitute them for drag reference area.
+  # He-fill scenario (open at S-MASS/S-ARCH): m_entry ≈ 453, beta ≈ 166 — rerun trajectory if adopted
+
+planet:
+  venus_radius_m: 6051800.0
+  gravity_m_s2: 8.87
+
+gas:
+  gamma: 1.30                    # CO2
+  specific_gas_constant_j_kg_k: 188.92   # = 8314.46 / 44.01, pure CO2
+
+atmosphere:
+  model: profile                 # CHANGED exponential → profile (density.kind below is the source of truth)
+  density:
+    kind: profile_file
+    profile_path: "atmosphere"
+    profile_format: "vcd_vira"
+    profile_selector: "lat0_sza15"
+  # exponential parameters: retained ONLY for the Allen-Eggers analytical check, not the main run
+  # (loader reads these at atmosphere top level; a nested exponential_benchmark block is ignored)
+  rho_ref_kg_m3: 0.01
+  alt_ref_m: 80000.0
+  scale_height_m: 7000.0         # NOTE: deceleration-band H ~ 4 km; 7 km is a coarse fit — benchmark only
+  temperature:
+    kind: table
+    altitude_m:    [0.0, 50000.0, 70000.0, 90000.0, 120000.0, 200000.0]
+    temperature_k: [735.0, 340.0, 240.0, 180.0, 160.0, 150.0]
+  dispersion:
+    mode: synthetic_gram_fixture       # G5 residual: synthetic, NOT real Venus-GRAM/VCD
+    venus_gram_hdf5_path: null
+    density_multiplier_dataset: "/density_multiplier"
+    temperature_delta_dataset: "/temperature_delta_k"
+    altitude_dataset: "/altitude_m"
+    synthetic_density_ln_sigma: 0.15       # ~16% 1-sigma
+    synthetic_temperature_sigma_k: 8.0     # low for the upper atmosphere — consider widening
+
+heating:
+  convective:
+    sutton_graves_coefficient_si: 0.00012698543020109976
+    source_id: "PV-4PROBE-CAL-CO2-CONV"
+  radiative:
+    coefficient_si: 1.9664544454345846e-24
+    density_exponent: 0.50
+    velocity_exponent: 8.0
+    nose_radius_exponent: 0.0              # NOTE: no Rn scaling on radiation — simplification
+    source_id: "PV-4PROBE-CAL-CO2-RAD"
+  tps_uncertainty_multiplier: 1.25         # design margin applied to heat load
+
+deploy:                          # single DGB pilot trigger — the constraint that binds
+  # FA1 production deploy box: 200-3000 Pa dynamic-pressure window, Mach <= ceiling.
+  # Production run deployed at q -> 3000 Pa cap, 73.19 km, Mach 1.55.
+  trigger_mode: q_window
+  trigger_mach: 2.0
+  mach_ceiling: 2.2
+  q_floor_pa: 200.0
+  q_cap_pa: 3000.0
+  min_altitude_m: 50000.0
+  disreef_mach_max: 0.8
+
+events:
+  drogue_deploy_alt_m: null      # single-event EDDI; no separate drogue/main
+  main_deploy_alt_m: null
+
+handoff:
+  trigger: deploy_event          # stop at the DGB deploy event (FA1 behavior), not a fixed altitude
+  altitude_m: 70000.0            # fallback only, used when trigger: altitude
+
+dispersions:
+  n_runs: 1000
+  seed: 1001
+  mass_fraction: 0.10            # ±10% on 689.130 → [620, 758] — UPPER BOUND EXCEEDS THE 700 CAP
+                                 # decide: clip at cap, or accept that dispersed runs model a cap breach
+                                 # also still unstated whether ±10% is 3-sigma or a hard bound
+  fpa_deg: 0.5                   # ±0.5° = 3-sigma corridor (R-GNC-EFPA-01); 1-sigma = 0.167
+  fpa_dispersion_is_3sigma: true
+
+numerics:
+  time_step_s: 0.25              # decel pulse is short; keep 0.5-vs-0.25 convergence on record
+  max_time_s: 1800.0
+  max_altitude_m: 250000.0
+  include_gravity: true
+  trajectory_model: constant_fpa # Notion FA1/Workbook-v1.3 numbers (76.4 g p50) are constant-FPA based.
+                                 # spherical_ballistic is the validated upgrade (PV +/-9%, DAVINCI -7%)
+                                 # but requires an FA1 rebaseline + a ~140 km interface before adoption.
+
+validation:
+  peak_g_cap_g: 200.0
+  peak_heat_cap_w_m2: 20000000.0           # flux, not load (loader key: peak_heat_cap_w_m2)
+  # heat_load_cap_j_cm2 RETIRED (FA1, 5 Jun): the committed steep entry runs 17,130 J/cm^2 by design;
+  # the governing thermal constraint flipped from heat load to PEAK FLUX (18.43 vs 20 MW/m^2, 7.9% margin -> FA8).
+  deploy_q_cap_pa: 3000.0                  # mirrors deploy.q_cap_pa
+  allen_eggers_tolerance_fraction: 0.05
+
+persistence:
+  workbook_path: "results/workbook_v1.xlsx"
+  latex_macros_path: "results/macros.tex"
+  require_existing_workbook: false
+
+source_ids:
+  peak_g:       "FA1-D41-entry-traj"
+  peak_q:       "FA1-D41-entry-traj"
+  peak_heat:    "FA1-D41-entry-traj"
+  heat_load:    "FA1-D41-entry-traj"
+  mach_handoff: "FA1-D41-entry-traj"
+
+mission_timeline:
+  # Metadata for the composite EDDI timeline plus D33 phase/power tables.
+  # D41 stops at the Mach/q deploy trigger; FA4 supplies the subsonic
+  # quasi-terminal descent estimate from deploy to 55 km float capture.
+  # NOTE: entry/gas/dry-float masses below are propagated from the EDDI v4 final workbook.
+  # The post-jettison split remains a sequence-model estimate pending a dedicated S-MASS update.
+  post_deploy_model:
+    enabled: true
+    source_id: "D33-FA4-FA5-post-deploy-1D-v1"
+    residual: "1D vertical post-deploy descent; parachute inflation/FSI and inflation mass-flow profile are heritage placeholders pending PDR."
+    target_altitude_m: 55000.0
+    time_step_s: 0.25
+    max_time_s: 1800.0
+    use_atmosphere_override: false
+    entry_stack_mass_kg: 689.130
+    post_jettison_mass_kg: 502.75
+    dry_float_mass_kg: 107.7987
+    dgb_pilot_cds_m2: 7.20
+    reefed_ringsail_cds_m2: 5.15
+    full_ringsail_cds_m2: 40.2
+    dgb_fill_time_s: 1.0
+    disreef_delay_s: 5.0
+    disreef_mach: 0.8
+    ringsail_fill_time_s: 2.0
+    jettison_delay_s: 18.0
+    inflation_start_delay_s: 21.0
+    inflation_duration_s: 30.0
+    n2_gas_mass_kg: 260.0        # EDDI v4 final workbook input: stored gas mass
+    n2_density_float_kg_m3: 0.59
+    drop_effective_mass_to_zero_at_float: true
+    dgb_terminal_v_73km_m_s: 184.0
+    full_terminal_v_55km_m_s: 17.3
+    opening_shock:
+      x1_cx: 1.6
+      q_deploy_pa: 3000.0
+      fmax_n: 24700.0
+      source_id: "FA5-Knacke-opening-shock"
+  post_deploy_descent:
+    target_altitude_m: 55000.0
+    estimate_duration_s: 913.75
+    duration_bounds_s: [913.75, 913.75]
+    source_id: "D33-FA4-post-deploy-1D-vira-v1"
+    residual: "Fallback only. The active post_deploy_model integrates the same VIRA profile used by entry; this value is the -8 deg centerline deploy-to-55km duration."
+  mass_profile:
+    source_id: "MTR-SMASS-v1.3"
+    initial_entry_mass_kg: 689.130
+    post_jettison_mass_kg: 502.75
+    dry_float_mass_kg: 107.7987
+    steps:
+      - label: "entry stack"
+        start_event: "Entry"
+        end_event: "Jettison P7"
+        mass_kg: 689.130
+      - label: "post-jettison float system"
+        start_event: "Jettison P7"
+        end_event: "Float hand-off"
+        mass_kg: 502.75
+  events:
+    - label: "Entry"
+      trajectory_event: "T0_interface"
+      source_id: "FA1-D41-entry-traj"
+      color: "#8c2d04"
+    - label: "Peak heat"
+      trajectory_event: "peak_heat"
+      source_id: "FA1-D41-entry-traj"
+      color: "#de6b2f"
+    - label: "Peak-g"
+      trajectory_event: "peak_g"
+      source_id: "FA1-D41-entry-traj"
+      color: "#b22222"
+      callout: true
+    - label: "Mortar P5"
+      trajectory_event: "drogue_deploy"
+      source_id: "FA3-DGB-trigger-window"
+      color: "#2f6f9f"
+      callout: true
+    - label: "DGB deploy"
+      trajectory_event: "handoff"
+      source_id: "FA1/FA3-interface"
+      color: "#111111"
+      callout: true
+    - label: "DGB inflation"
+      post_deploy_event: "dgb_inflated"
+      source_id: "FA4-P5-P6-sequence"
+      color: "#2f6f9f"
+    - label: "Disreef P6"
+      post_deploy_event: "disreef"
+      source_id: "FA4-P6-reefing-cutter"
+      color: "#2ca25f"
+    - label: "Jettison P7"
+      post_deploy_event: "jettison"
+      source_id: "FA4-P7-jettison"
+      color: "#756bb1"
+    - label: "Cover P8"
+      offset_from_event: "drogue_deploy"
+      offset_s: 19.0
+      source_id: "FA4-P8-cover-release"
+      color: "#756bb1"
+    - label: "Valve open"
+      post_deploy_event: "inflation_start"
+      source_id: "FA4-P8-valve-open"
+      color: "#756bb1"
+    - label: "Infl. end"
+      post_deploy_event: "inflation_end"
+      source_id: "FA4-Ch7-30s-window"
+      color: "#756bb1"
+    - label: "Chute rel. P9"
+      offset_from_event: "drogue_deploy"
+      offset_s: 55.0
+      source_id: "FA4-P9-chute-release"
+      color: "#8c6d31"
+    - label: "Float hand-off"
+      post_deploy_event: "float_handoff"
+      source_id: "FA4-D33-quasi-terminal-subsonic-descent"
+      color: "#8c6d31"
+      callout: true
+  power_profile:
+    source_id: "FA4-Table-11-11-closed"
+    bus_assumption: "28 V regulated bus. Sourced estimates shown; pyro pulse rows retain single-fire and worst-credible A/B peaks for EPS/harness sizing."
+    phases:
+      - label: "entry armed"
+        start_event: "Entry"
+        end_event: "Mortar P5"
+        power_w: 9.3
+        color: "#fdbb84"
+      - label: "descent monitoring"
+        start_event: "Mortar P5"
+        end_event: "Valve open"
+        power_w: 9.3
+        color: "#fdd49e"
+      - label: "inflation control"
+        start_event: "Valve open"
+        end_event: "Infl. end"
+        power_w: 18.6
+        color: "#bcbddc"
+      - label: "float capture monitoring"
+        start_event: "Infl. end"
+        end_event: "Float hand-off"
+        power_w: 9.0
+        color: "#d9d9d9"
+    transients:
+      - label: "Mortar A/B"
+        event: "Mortar P5"
+        duration_s: 0.05
+        single_fire_power_w: 149.0
+        worst_credible_power_w: 289.0
+        source_id: "FA4-Table-11-11"
+      - label: "Disreef cutter"
+        event: "Disreef P6"
+        duration_s: 0.05
+        single_fire_power_w: 149.0
+        worst_credible_power_w: 289.0
+        source_id: "FA4-Table-11-11"
+      - label: "Jettison"
+        event: "Jettison P7"
+        duration_s: 0.05
+        single_fire_power_w: 149.0
+        worst_credible_power_w: 289.0
+        source_id: "FA4-Table-11-11"
+      - label: "Cover release"
+        event: "Cover P8"
+        duration_s: 0.05
+        single_fire_power_w: 149.0
+        worst_credible_power_w: 289.0
+        source_id: "FA4-Table-11-11"
+      - label: "Valve"
+        event: "Valve open"
+        duration_s: 2.0
+        single_fire_power_w: 25.0
+        worst_credible_power_w: 40.0
+        source_id: "FA4-Table-11-11"
+    residuals:
+      - "Subsonic descent is quasi-terminal, not a full parachute 3-DOF model."
+      - "Worst-credible A/B firing peaks are retained for EPS/harness transient sizing."

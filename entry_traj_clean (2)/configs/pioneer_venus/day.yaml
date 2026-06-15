@@ -1,0 +1,91 @@
+architecture:
+  tuple_id: "Pioneer-Venus-Day-Probe"
+  workbook_id: "PV heritage comparison"
+
+entry:
+  interface_altitude_m: 200000.0
+  velocity_m_s: 11540.0
+  fpa_deg: -25.4
+  m_entry_kg: 91.0
+
+vehicle:
+  cd: 1.05
+  cd_mach_table: null
+  diameter_m: 0.76
+  reference_area_m2: null
+  nose_radius_m: 0.19
+
+planet:
+  venus_radius_m: 6051800.0
+  gravity_m_s2: 8.87
+
+gas:
+  gamma: 1.30
+  specific_gas_constant_j_kg_k: 188.92
+
+atmosphere:
+  model: profile
+  vcd_envelope_path: null
+  rho_ref_kg_m3: 0.01
+  alt_ref_m: 80000.0
+  scale_height_m: 7000.0
+  density:
+    kind: profile_file
+    profile_path: "../atmosphere"
+    profile_format: "vcd_vira"
+    profile_selector: "lat0_sza15"
+  temperature:
+    kind: table
+    altitude_m: [0.0, 50000.0, 70000.0, 90000.0, 120000.0, 200000.0]
+    temperature_k: [735.0, 340.0, 240.0, 180.0, 160.0, 150.0]
+  dispersion:
+    mode: synthetic_gram_fixture
+    venus_gram_hdf5_path: null
+
+heating:
+  convective:
+    sutton_graves_coefficient_si: 0.00012698543020109976
+    source_id: "PV-4PROBE-CAL-CO2-CONV"
+  radiative:
+    coefficient_si: 1.9664544454345846e-24
+    density_exponent: 0.50
+    velocity_exponent: 8.0
+    nose_radius_exponent: 0.0
+    source_id: "PV-4PROBE-CAL-CO2-RAD"
+
+handoff:
+  altitude_m: 70000.0
+
+events:
+  drogue_deploy_alt_m: 70000.0
+  main_deploy_alt_m: null
+
+dispersions:
+  n_runs: 1000
+  seed: 1001
+  mass_fraction: 0.10
+  fpa_deg: 2.0
+
+numerics:
+  time_step_s: 0.25
+  max_time_s: 1200.0
+  max_altitude_m: 250000.0
+  include_gravity: true
+  trajectory_model: spherical_ballistic
+
+validation:
+  peak_g_cap_g: 200.0
+  peak_heat_cap_w_m2: 20000000.0
+  allen_eggers_tolerance_fraction: 0.08
+
+persistence:
+  workbook_path: "results/pioneer_venus/workbook_v1.xlsx"
+  latex_macros_path: "results/pioneer_venus/macros.tex"
+  require_existing_workbook: false
+
+source_ids:
+  peak_g: "PV-Day-NASA-NTRS-20130010987"
+  peak_q: "PV-Day-NASA-NTRS-20130010987"
+  peak_heat: "PV-Day-NASA-NTRS-20130010987"
+  heat_load: "PV-Day-NASA-NTRS-20130010987"
+  mach_handoff: "PV-Day-NASA-NTRS-20130010987"

@@ -1,0 +1,41 @@
+architecture:
+  tuple_id: "Pioneer-Venus-Night-Probe"
+  workbook_id: "PV heritage comparison"
+
+entry:
+  interface_altitude_m: 200000.0
+  velocity_m_s: 11540.0
+  fpa_deg: -41.50
+  m_entry_kg: 91.0
+
+vehicle:
+  cd: 1.05
+  cd_mach_table: null
+  diameter_m: 0.76
+  reference_area_m2: null
+  nose_radius_m: 0.19
+
+handoff:
+  altitude_m: 70000.0
+
+atmosphere:
+  model: profile
+  density:
+    kind: profile_file
+    profile_path: "../atmosphere"
+    profile_format: "vcd_vira"
+    profile_selector: "night_lat0_sza165"
+
+numerics:
+  time_step_s: 0.25
+  max_time_s: 1200.0
+  max_altitude_m: 250000.0
+  include_gravity: true
+  trajectory_model: spherical_ballistic
+
+source_ids:
+  peak_g: "PV-Night-NASA-NTRS-20160012771"
+  peak_q: "PV-Night-NASA-NTRS-20160012771"
+  peak_heat: "PV-Night-NASA-NTRS-20160012771"
+  heat_load: "PV-Night-NASA-NTRS-20160012771"
+  mach_handoff: "PV-Night-NASA-NTRS-20160012771"
