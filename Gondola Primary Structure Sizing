@@ -1,0 +1,323 @@
+import numpy as np
+
+# ==============================================================================
+#                 PROJECT VISTA: GONDOLA STRUCTURAL OPTIMIZATION
+# ==============================================================================
+# DESIGN ASSUMPTIONS & METHODOLOGY:
+# 1. Structural Configuration: Cylinder built from thin aluminum outer skin 
+#    stabilized by N longitudinal stringers and 2 ring frames placed strictly 
+#    at the top and bottom boundaries.
+# 2. Structural Load Introduction Path (End-Mounted Fly-Away Hardpoints): 
+#    - External deployment shell forces introduce concentrated loads directly into the 
+#      top and bottom faces (ends) of each stringer column line (2 * N attachment points total).
+#    - This creates a highly efficient concentric axial compression path down the 
+#      stringer centerlines, eliminating localized eccentric bending moments at the joints.
+# 3. Separation Mass Allocation (Fly-Away Adaptation):
+#    - The heavy active HDRM mechanism bodies, electrical harnesses, and pusher 
+#      springs remain on the external deployment shell upon release.
+#    - The gondola flight vehicle ONLY carries the lightweight passive high-tensile 
+#      release studs/bolts forward into orbit.
+# 4. Stringer Profile & Orientation: Modeled as solid rectangular bars.
+#    - Depth (d) extends along the RADIAL axis.
+#    - Width (w) extends along the CIRCUMFERENTIAL arc.
+# 5. Ring Frame Profile & Orientation: Modeled as flat interior bands.
+#    - Depth (d) extends along the RADIAL axis.
+#    - Width (b) extends along the AXIAL/UPWARD axis parallel to cylinder height.
+# 6. Boundary Conditions: 
+#    - End lids are modeled as clamped circular plates under a uniform inertial 
+#      self-weight distribution (worst-case peak entry deceleration).
+#    - Stiffeners are treated as pinned-pinned columns over the span length L 
+#      for conservative isolated local column buckling evaluations.
+#
+# DESIGN SAFETY FACTORS (Aerospace Standards per NASA SP-8007):
+# - Yield Safety Factor (SF_yield = 1.25): Applied to all material stress states
+#    (axial, bending, shear, and Von Mises combined criteria) to guarantee zero 
+#    permanent plastic deformation during peak flight envelope loads.
+# - Buckling Safety Factor (SF_buckle = 1.50): Applied to all geometric stability 
+#    limits (local skin wrinkling, global shell buckling, Euler column snapping, 
+#    and ring ovalization) to account for high sensitivity to manufacturing imperfections.
+# ==============================================================================
+#                   COMPREHENSIVE LIST OF CONSIDERED STRESS STATES
+# ==============================================================================
+# 1. LONGITUDINAL AXIAL LOADING CASES
+#    - Sig_ax1           : Pure uniform compressive stress from steady-state 
+#                          aerodynamic entry drag force (Fd_gondola).
+#    - Sig_ax2           : Massive static compressive stress from peak 
+#                          deceleration acting on the gondola payload mass (m_g).
+# 2. LOCAL STRINGER STRESSES & MULTI-AXIAL FAILURE
+#    - max_tau           : Maximum local cross-sectional shear stress on the 
+#                          worst-case stringer caused by the radial entry punch.
+#    - max_sig_b_d       : Peak bending stress on the outer fibers of the stringer
+#                          as it bends out-of-plane across its thickness (d).
+#    - max_sig_b_w       : Peak bending stress on the side edges of the stringer
+#                          as it bends in-plane across its width (w).
+#    - Sig_stringer_comb : Total structural normal stress interaction on the worst edge:
+#                          axial compression + worst localized bending.
+#    - Sig_von_mises     : Combined multi-axial stress state handling simultaneous
+#                          normal compression and shear using Von Mises distortion energy.
+# 3. STRUCTURAL HOOP/RING STRESSES (ROARK'S FORMULAS FOR CIRCULAR RINGS)
+#    - Sig_ring_total    : Ultimate combined normal stress inside the ring profile 
+#                          (Axial Hoop Thrust + In-Plane Bending Stress).
+# 4. FLAT END LID STRESS & DEFLECTION
+#    - Sig_lid_bending   : Maximum bending stress at the clamped outer boundary of the lid.
+#    - delta_lid         : Out-of-plane center deflection of the lid under 25.38g self-weight.
+# 5. THIN-WALLED GEOMETRIC STABILITY & BUCKLING CRITERIA (NASA SP-8007)
+#    - Sig_cr_skin       : Critical thin-plate buckling stress; catches skin wrinkles.
+#    - Sig_cr_global     : Critical stiffened-shell global buckling stress limit.
+#    - N_cr_ring         : Critical hoop buckling load to prevent ring ovalization.
+#    - Sig_cr_euler      : Critical column buckling stress of individual stringers.
+# ==============================================================================
+
+#%% Constants and Flight Loads
+m_g = 67.0         # kg: gondola assembly mass
+m_bg = 420.0       # kg: gondola+balloon mass at entry
+L = 0.25           # m: gondola height
+R = 0.56 / 2       # m: gondola radius
+g = 9.81           # m/s2
+
+m_dep = 630.0      # kg: mass at deployment
+Sref = 2.72        # m2
+beta = 232.0       # kg/m2
+q_max = 40.7e3     # Pa
+Cd = m_dep / (Sref * beta)
+
+n_ax_entry = 78.62
+n_rad_entry = n_ax_entry * 0.1
+
+Fd_gondola = (q_max * Sref * Cd) * (m_g / m_dep) 
+N_g_entry = n_ax_entry * g * m_g
+P_g_rad_entry = n_rad_entry * g * m_g
+
+# --- AEROSPACE SAFETY FACTORS ---
+SF_yield = 1.25    # Applied to material yield stresses
+SF_buckle = 1.50   # Applied to instability/buckling critical loads (NASA standard)
+
+# Material Properties (Aluminum)
+rho = 2700.0
+E = 73.1e9
+Sig_y = 324.e6
+tau_y = 0.577 * Sig_y
+nu = 0.33                                 # Poisson's ratio for structural aluminum
+
+
+# Precise Sub-system Hardware Mass Components Per Stiffener
+m_cable_isolated = 0.9           # kg per cable element
+m_cable_bracket = 5.9e-6 * rho * 2  # kg per cable connection point
+
+# Deployment Mass Hardware Split Calculations
+m_passive_bolt_single = 0.040    # kg per bolt (Retained on Gondola)
+m_gondola_retained_bolts = m_passive_bolt_single * 2
+
+# Left-behind mechanism allocation: Actuators, spring packs, and shell mounts
+m_left_behind_single = 0.260     # kg per hardpoint dropped with the shell
+m_shell_dropped_hardware = m_left_behind_single * 2
+
+#%% Vectorized Parameter Mesh Grid (6D Space Sweep)
+t_range     = np.arange(10.0, 15.0, 0.2) / 1000.0   # Skin Thickness
+w_range     = np.arange(10.0, 15.0, 0.5) / 1000.0  # Stringer Width (w)
+d_range     = np.arange(10.0, 15.0, 0.5) / 1000.0  # Stiffener/Ring Radial Depth (d)
+# OPTIMIZATION: Configured b_range starting directly at 6.0mm minimum constraint
+b_range     = np.arange(10.0, 15.0, 0.5) / 1000.0  # Ring Frame Axial Width (b)
+N_range     = np.arange(6, 7, 1)                  # Stringer Count
+t_lid_range = np.arange(10.0, 15.0, 0.2) / 1000.0   # Flat Lids
+
+T_SKIN, W, D, B, N, T_LID = np.meshgrid(t_range, w_range, d_range, b_range, N_range, t_lid_range, indexing='ij')
+
+print(f"Number of combinations evaluated vectorially: {T_SKIN.size:,} elements.")
+
+#%% Vectorized Structural Math Evaluations
+
+# Geometry Profiles
+A_stringer_single = W * D
+A_strips = N * A_stringer_single
+V_strips = A_strips * L
+I_rad = (1.0 / 12.0) * W * D**3
+I_circ = (1.0 / 12.0) * D * W**3
+
+# Lateral I-beams Profiles
+A_lateral_beam = (2.0 * (D / 2.0) * 0.002) + (2.0 * (B - 0.004) * 0.002) 
+Beam_angle = np.radians(360.0 / N)
+L_lateral_beams = 3 * 2.0 * R + 4.0 * R * np.sin(Beam_angle) + 4.0 * R * np.cos(Beam_angle)
+V_lateral_beams = L_lateral_beams * A_lateral_beam
+
+# Antenna Booms
+L_antenna_boom = 0.050 
+R_antenna_boom = D / 4.0
+A_antenna_boom = np.pi * R_antenna_boom**2
+V_antenna_booms = 2.0 * L_antenna_boom * A_antenna_boom
+
+V_skin = 2.0 * np.pi * R * T_SKIN * L
+V_bulkheads = 2.0 * (np.pi * R**2 * T_LID)  
+
+# Ring Properties (B = axial width, D = radial depth)
+A_ring = B * D
+I_ring = (1.0 / 12.0) * B * D**3
+V_rings = 2.0 * A_ring * (2.0 * np.pi * R)
+
+# Local Skin Buckling 
+stringer_spacing = (2.0 * np.pi * R) / N
+Sig_cr_skin = 2.2 * E * (T_SKIN / stringer_spacing)**2
+
+# Stresses along attachment profiles
+Prad_max = P_g_rad_entry * (2.0 / N)
+Sig_ax1 = Fd_gondola / A_strips
+Sig_ax2 = N_g_entry / A_strips
+
+max_tau = Prad_max / (W * D)
+max_sig_b_d = Prad_max * L * (D / 2.0) / I_rad
+max_sig_b_w = Prad_max * L * (W / 2.0) / I_circ
+Sig_stringer_comb = Sig_ax2 + np.maximum(max_sig_b_d, max_sig_b_w)
+
+# Combined Multi-Axial Stress State (Von Mises Distortion Energy Criterion)
+Sig_von_mises = np.sqrt(Sig_stringer_comb**2 + 3.0 * max_tau**2)
+
+# Hoop Ring Behavior
+M_ring_max = 0.3183 * P_g_rad_entry * R
+N_ring_actual = 0.5 * P_g_rad_entry
+Sig_ring_total = (N_ring_actual / A_ring) + (M_ring_max * (D / 2.0) / I_ring)
+N_cr_ring = (3.0 * E * I_ring) / (R**2)
+
+# Local Euler Column Buckling of Stringers (Weakest-Axis Check)
+I_weakest = np.minimum(I_rad, I_circ)
+P_cr_euler = (np.pi**2 * E * I_weakest) / (L**2)
+Sig_cr_euler = P_cr_euler / A_stringer_single
+
+# Flat Circular Lid Bending & Deflection Math (Clamped Boundary Conditions)
+m_single_lid_mesh = rho * (np.pi * R**2 * T_LID)
+F_inertial_lid = m_single_lid_mesh * n_ax_entry * g
+
+Sig_lid_bending = (3.0 * F_inertial_lid) / (4.0 * np.pi * T_LID**2)
+delta_lid = (3.0 * (1.0 - nu**2) * F_inertial_lid * R**2) / (16.0 * np.pi * E * T_LID**3)
+
+# Global Interaction Buckling (NASA SP-8007 structural smear approximation)
+A_total_axial = (2.0 * np.pi * R * T_SKIN) + A_strips
+t_eff_axial = A_total_axial / (2.0 * np.pi * R)
+gamma = 0.45  
+Sig_cr_global = gamma * (0.6 * E * t_eff_axial / R)
+
+# Geometric Sane-Proportion Limits
+stringer_unstable = (D / W > 1.0) | (W / D > 4.0)
+ring_unstable = (B / D > 4.0) | (B / D < 0.2)
+
+#%% Unified Structural Evaluation Boolean Masks (Factored Requirements)
+valid_mask = (
+    # Yield Material Failure Limits (Factored by SF_yield)
+    ((Sig_ax1 * SF_yield) <= Sig_y) &
+    ((Sig_von_mises * SF_yield) <= Sig_y) &       
+    ((max_tau * SF_yield) <= tau_y) &
+    ((Sig_ring_total * SF_yield) <= Sig_y) &
+    ((Sig_lid_bending * SF_yield) <= Sig_y) &        
+    
+    # Instability / Buckling Limits (Factored by SF_buckle)
+    ((N_ring_actual * SF_buckle) < N_cr_ring) &
+    ((Sig_ax2 * SF_buckle) < Sig_cr_skin) &
+    ((Sig_ax2 * SF_buckle) < Sig_cr_global) &
+    ((Sig_ax2 * SF_buckle) < Sig_cr_euler) & 
+    
+    # Custom Geometric Constraints (B must be >= 6.0 mm)
+    (B >= 0.006) &
+    
+    ~stringer_unstable &
+    ~ring_unstable
+)
+
+#%% Results Extraction
+if np.any(valid_mask):
+    m_total_hardware_per_N = m_cable_isolated + m_cable_bracket + m_gondola_retained_bolts
+    # Added V_antenna_booms to global sweep tracking calculation
+    total_mass_array = rho * (V_strips + V_rings + V_skin + V_bulkheads + V_lateral_beams + V_antenna_booms) + m_total_hardware_per_N * N
+    lowest_mass = np.min(total_mass_array[valid_mask])
+    
+    matching_indices = np.where(valid_mask & (total_mass_array == lowest_mass))
+    
+    print("\nOptimized Configurations Found (With Fly-Away Budget Splitting):")
+    for i in range(len(matching_indices[0])):
+        idx = tuple(midx[i] for midx in matching_indices)
+        
+        opt_t_skin = t_range[idx[0]]
+        opt_w = w_range[idx[1]]
+        opt_d = d_range[idx[2]]
+        opt_b = b_range[idx[3]]
+        opt_N = N_range[idx[4]]
+        opt_t_lid = t_lid_range[idx[5]]
+        
+        print(f"Skin Wall = {opt_t_skin*1000:.1f} mm | "
+              f"Lids (Top/Bot) = {opt_t_lid*1000:.1f} mm | "
+              f"w = {opt_w*1000:.1f} mm (circumferential) | "
+              f"d = {opt_d*1000:.1f} mm (radial) | "
+              f"b = {opt_b*1000:.1f} mm (axial) | "
+              f"N_AP = {opt_N:.0f}")
+        
+        # Exact mass math breakdown allocations
+        mass_skin_cyl = rho * (2.0 * np.pi * R * opt_t_skin * L)
+        mass_lids = rho * (2.0 * np.pi * R**2 * opt_t_lid)
+        mass_stiffeners = rho * (opt_N * opt_w * opt_d * L)
+        mass_rings = rho * (2.0 * (opt_b * opt_d) * (2.0 * np.pi * R))
+        mass_cables = m_cable_isolated * opt_N
+        mass_cable_attachments = m_cable_bracket * opt_N
+        
+        # Dynamic profile calculations for lateral beam printouts
+        opt_angle = np.radians(360.0 / opt_N)
+        opt_L_lateral = 2.0 * R + 4.0 * R * np.sin(opt_angle) + 4.0 * R * np.cos(opt_angle)
+        opt_A_lateral = (2.0 * (opt_d / 2.0) * 0.002) + (2.0 * (opt_b - 0.004) * 0.002)
+        mass_lateral = rho * opt_L_lateral * opt_A_lateral
+        
+        # Dynamic extraction for antenna booms mass display
+        opt_R_antenna_boom = opt_d / 4.0
+        opt_A_antenna_boom = np.pi * opt_R_antenna_boom**2
+        mass_antenna_booms = rho * 2.0 * 0.050 * opt_A_antenna_boom
+        
+        # Spliced deployment mass components
+        mass_retained_bolts = m_gondola_retained_bolts * opt_N
+        mass_shell_left_behind = m_shell_dropped_hardware * opt_N
+        
+        computed_gondola_total = (mass_skin_cyl + mass_lids + mass_stiffeners + mass_rings + 
+                                  mass_lateral + mass_antenna_booms + mass_cables + mass_cable_attachments + mass_retained_bolts)
+        
+        # System Mass Budget Overview Printout Table
+        print("\n" + "="*55)
+        print("          VISTA CORE GONDOLA FLIGHT MASS BUDGET")
+        print("="*55)
+        print(f"  Cylinder Outer Skin Wall      :  {mass_skin_cyl:6.3f} kg  ({(mass_skin_cyl/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Top & Bottom Floors           :  {mass_lids:6.3f} kg  ({(mass_lids/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Longitudinal Stiffeners       :  {mass_stiffeners:6.3f} kg  ({(mass_stiffeners/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Ring Stiffeners               :  {mass_rings:6.3f} kg  ({(mass_rings/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Lateral Stiffeners            :  {mass_lateral:6.3f} kg  ({(mass_lateral/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Antenna Booms                 :  {mass_antenna_booms:6.3f} kg  ({(mass_antenna_booms/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Cables                        :  {mass_cables:6.3f} kg  ({(mass_cables/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Cable Bracket Attachments     :  {mass_cable_attachments:6.3f} kg  ({(mass_cable_attachments/computed_gondola_total)*100:5.1f}%)")
+        print(f"  Retained Deployment Studs     :  {mass_retained_bolts:6.3f} kg  ({(mass_retained_bolts/computed_gondola_total)*100:5.1f}%)")
+        print("-"*55)
+        print(f"  TOTAL GONDOLA RETAINED WEIGHT :  {computed_gondola_total:6.3f} kg  (100.0%)")
+        print("="*55)
+        
+        # Isolated External Dropped Mass Statement Below
+        print(f"  Left Behind on Deployment Shell Structure: {mass_shell_left_behind:.3f} kg\n")
+
+        # ==============================================================================
+        #              NEW: COMPREHENSIVE STRUCTURAL STRESS & BUCKLING OVERVIEW
+        # ==============================================================================
+        print("="*68)
+        print("                VISTA STRUCTURAL STRESS & STABILITY REPORT")
+        print("="*68)
+        print(f"  {'STRESS ANALYSIS CASE':<30} | {'ACTUAL*SF':<15} | {'ALLOWABLE LIMIT':<15}")
+        print("-"*68)
+        
+        # --- Yield Material Failure Limits ---
+        print(f"  1. Yield Limits (SF_yield = {SF_yield:.2f}):")
+        print(f"     - Aero Axial Drag (Sig_ax1)     : {Sig_ax1[idx]*SF_yield/1e6:11.3f} MPa | {Sig_y/1e6:11.3f} MPa")
+        print(f"     - Stringer Von Mises Combined  : {Sig_von_mises[idx]*SF_yield/1e6:11.3f} MPa | {Sig_y/1e6:11.3f} MPa")
+        print(f"     - Stringer Radial Shear (tau)  : {max_tau[idx]*SF_yield/1e6:11.3f} MPa | {tau_y/1e6:11.3f} MPa")
+        print(f"     - Hoop Ring Profile Total      : {Sig_ring_total[idx]*SF_yield/1e6:11.3f} MPa | {Sig_y/1e6:11.3f} MPa")
+        print(f"     - Clamped Flat Lid Bending     : {Sig_lid_bending[idx]*SF_yield/1e6:11.3f} MPa | {Sig_y/1e6:11.3f} MPa")
+        print("-"*68)
+        
+        # --- Instability / Buckling Limits ---
+        print(f"  2. Stability Limits (SF_buckle = {SF_buckle:.2f}):")
+        print(f"     - Local Skin Wrinkling         : {Sig_ax2[idx]*SF_buckle/1e6:11.3f} MPa | {Sig_cr_skin[idx]/1e6:11.3f} MPa")
+        print(f"     - Stiffened Shell Global Buckle: {Sig_ax2[idx]*SF_buckle/1e6:11.3f} MPa | {Sig_cr_global[idx]/1e6:11.3f} MPa")
+        print(f"     - Stringer Euler Column Buckle : {Sig_ax2[idx]*SF_buckle/1e6:11.3f} MPa | {Sig_cr_euler[idx]/1e6:11.3f} MPa")
+        print(f"     - Ring Ovalization Hoop Load   : {N_ring_actual*SF_buckle/1000:11.3f} kN  | {N_cr_ring[idx]/1000:11.3f} kN")
+        print("="*68)
+else:
+    print("No valid geometry options passed all combined safety filters.")
