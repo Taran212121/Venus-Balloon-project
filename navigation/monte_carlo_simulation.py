@@ -376,20 +376,20 @@ def recover_data(npz_filename: str, only_vortex: bool = False, savefig: bool = F
     #     results["altitude"]
     # )
 
-    # plot_monte_carlo_groundtrack(
-    #     latitudes_deg=results['latitude'],
-    #     longitudes_deg=results['longitude'],
-    #     mode='trajectories',
-    #     alpha=0.03,
-    #     savefig=savefig,
-    # )
-
     plot_monte_carlo_groundtrack(
         latitudes_deg=results['latitude'],
         longitudes_deg=results['longitude'],
-        mode='density',
+        mode='trajectories',
+        alpha=0.03,
         savefig=savefig,
     )
+
+    # plot_monte_carlo_groundtrack(
+    #     latitudes_deg=results['latitude'],
+    #     longitudes_deg=results['longitude'],
+    #     mode='density',
+    #     savefig=savefig,
+    # )
 
     # generate_heatmap_snapshots(
     #     times=results['times'],
@@ -422,7 +422,6 @@ def monte_carlo_comparison(savefig:bool):
         ],
         savefig=savefig
     )
-    
 
 
 
@@ -431,5 +430,5 @@ def monte_carlo_comparison(savefig:bool):
 if __name__ == "__main__":
     
     # main()
-    # recover_data("300b_300d_combined.npz", only_vortex=False, savefig=True)
-    monte_carlo_comparison(savefig=True)
+    recover_data("300b_300d_combined.npz", only_vortex=True, savefig=True)
+    # monte_carlo_comparison(savefig=True)

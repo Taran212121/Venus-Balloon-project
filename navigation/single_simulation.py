@@ -65,7 +65,7 @@ VISUALIZATIONS = {
 
     # Communications
     "link_plot": True,
-    "link_analysis": False,
+    "link_analysis": True,
 }
 
 # VCD config

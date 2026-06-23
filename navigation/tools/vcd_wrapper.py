@@ -23,13 +23,13 @@ def sample_vcd(*args, **kwargs):
 if __name__ == "__main__":
     dset = r"C:\Users\juliu\OneDrive - Delft University of Technology\Bureaublad\BSc AE Y3\DESIGN SYNTHESIS EXERCISE\VCD2.3\VCD_DATA\\"
     extvar_keys = np.ones(100, dtype=np.int32)
-    extvar_keys[39] = 1  # Net Solar Flux (SW) received at the top of the atmosphere (W/m2), positive downward
-    extvar_keys[40] = 1  # SW4 net flux at given altitude (W/m2), positive downward
-    extvar_keys[41] = 1  # LW5 net flux at given altitude (W/m2), positive upward
+    # extvar_keys[39] = 1  # Net Solar Flux (SW) received at the top of the atmosphere (W/m2), positive downward
+    # extvar_keys[40] = 1  # SW4 net flux at given altitude (W/m2), positive downward
+    # extvar_keys[41] = 1  # LW5 net flux at given altitude (W/m2), positive upward
 
     zon_wind, mer_wind, vert_wind, temp, pres, dens, ext, seed_out, ier = \
     sample_vcd(
-        2, 60000.0,
+        2, 56000.0,
         0.0, 80.0,
         0,  # hires
         1,  # date key

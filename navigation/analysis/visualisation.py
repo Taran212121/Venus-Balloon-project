@@ -623,7 +623,7 @@ def plot_monte_carlo_groundtrack(
         - "density": 2D histogram (recommended for many runs)
     """
 
-    fig, ax = setup_venus_map_axes(figsize=(14, 6), alpha=1)
+    fig, ax = setup_venus_map_axes(figsize=(14, 6), alpha=0.8)
 
     n_runs = latitudes_deg.shape[0]
 
